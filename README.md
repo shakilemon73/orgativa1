@@ -1,11 +1,21 @@
-<div align="center">
+# Orgativa — Organic Grocery E-Commerce Platform
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Orgativa is a modern organic e-commerce web application built for Bangladesh with Bangla localization and Supabase integration.
 
-  <h1>Built with AI Studio</h2>
+## Features
+- **Bangla Localization**: Native language interface and BDT (৳) currency formatting.
+- **Organic Product Catalog**: Filter by categories, search, badges (সেরা বিক্রয়, প্রিমিয়াম, অর্গানিক, etc.).
+- **Admin Management Panel**: Real-time management for products, categories, orders, and site settings.
+- **Supabase Integration**: Full database integration with fallback support.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
-
-  <a href="https://aistudio.google.com/apps">Start building</a>
-
-</div>
+## Database Setup (Supabase)
+To set up your database in Supabase:
+1. Open your Supabase Project Dashboard.
+2. Go to **SQL Editor**.
+3. Copy the contents of `supabase-schema.sql` located at the root of this project and execute it.
+4. Set your environment variables in `.env`:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+5. You can also sync demo products, categories, settings, and orders directly from the **Admin Dashboard** or **Admin Settings** page in the web app.

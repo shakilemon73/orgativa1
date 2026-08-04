@@ -1,0 +1,183 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-org-primary: #2D5A27;
+  --color-org-on-primary: #ffffff;
+  --color-org-primary-container: #DFF2D8;
+  --color-org-on-primary-container: #0D2B09;
+  --color-org-secondary: #4C4733;
+  --color-org-on-secondary: #ffffff;
+  --color-org-secondary-container: #E8DFC5;
+  --color-org-tertiary: #D64545;
+  --color-org-bg: #F9F9F9;
+  --color-org-on-bg: #1A1C1C;
+  --color-org-surface: #ffffff;
+  --color-org-on-surface: #1A1C1C;
+  --color-org-surface-variant: #E2E2E2;
+  --color-org-on-surface-variant: #434843;
+  --color-org-outline: #737973;
+  --color-org-outline-variant: #C3C8C1;
+  --color-org-surface-container-low: #F3F3F4;
+  --color-org-surface-container: #EEEEEE;
+  --color-org-surface-container-high: #E8E8E8;
+  --color-org-dark-footer: #0B2013;
+
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Noto Serif', serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #F9F9F9;
+  color: #1A1C1C;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Editorial Minimalist Typography Standards */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Noto Serif', serif !important;
+  letter-spacing: -0.015em !important;
+  font-weight: 500 !important;
+}
+
+p, span, div, li, ul, ol, label {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Premium Clickable Transition & Hover States */
+a, button, select, input[type="submit"], [role="button"] {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+a:hover, button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* World-class Global Input/Textarea/Select Standardizations */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+select,
+textarea {
+  min-height: 44px; /* Optimal mobile touch target size */
+  padding: 11px 14px;
+  font-size: 15px;
+  border: 1px solid #D1D5DB !important; /* Uniform subtle grey border */
+  border-radius: 8px !important;
+  background-color: #ffffff !important;
+  color: #1A1C1C !important;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  outline: none !important;
+  box-sizing: border-box;
+}
+
+/* High-contrast and accessible focus ring */
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="password"]:focus,
+select:focus,
+textarea:focus {
+  border-color: #2D5A27 !important;
+  box-shadow: 0 0 0 3px rgba(45, 90, 39, 0.16) !important;
+}
+
+textarea {
+  min-height: 80px;
+}
+
+::selection {
+  background-color: #2D5A27;
+  color: white;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  font-size: inherit;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+.font-serif {
+  font-family: 'Noto Serif', serif;
+}
+
+/* Line clamp helpers */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* Smooth horizontal scroll for nav strips */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* Prevent text overflow globally */
+img, svg, video { max-width: 100%; height: auto; }
+
+/* Ensure iOS input focus does not trigger auto-zoom */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Spin animation for loading states */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
