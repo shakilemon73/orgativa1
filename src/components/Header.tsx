@@ -165,13 +165,6 @@ export default function Header() {
               <Truck size={12} style={{ color: P, flexShrink: 0 }} />
               <span style={{ whiteSpace: "nowrap", fontSize: 11 }}>{t("ট্র্যাক অর্ডার", "Track")}</span>
             </a>
-
-            {!useCompactHeader && (
-              <>
-                <div style={{ width: 1, height: 12, backgroundColor: "#D1E3CF" }} />
-                <LanguageSwitcher lang={lang} setLang={setLang} />
-              </>
-            )}
           </div>
         </div>
       </div>
@@ -400,9 +393,6 @@ export default function Header() {
             flexShrink: 0 
           }}>
             
-            {/* Language switch on mobile/tablet to save space */}
-            {useCompactHeader && <LanguageSwitcher lang={lang} setLang={setLang} />}
-
             {/* Premium World-Class Cart Button */}
             <button 
               onClick={() => navigate("/cart")} 
@@ -915,26 +905,5 @@ export default function Header() {
         )}
       </AnimatePresence>
     </header>
-  );
-}
-
-function LanguageSwitcher({ lang, setLang }: { lang: "bn" | "en"; setLang: (l: "bn" | "en") => void }) {
-  return (
-    <div style={{ 
-      display: "inline-flex", 
-      alignItems: "center", 
-      backgroundColor: "#EBF3EA", 
-      padding: "3px 9px", 
-      borderRadius: 16, 
-      border: "1px solid #D1E3CF",
-      fontSize: 10,
-      fontWeight: 700,
-      color: P,
-      fontFamily: "'Inter', sans-serif",
-      gap: 4
-    }}>
-      <Globe size={11} style={{ color: P }} />
-      <span>EN</span>
-    </div>
   );
 }

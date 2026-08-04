@@ -16,42 +16,30 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const banglaDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Language>(() => {
-    const saved = localStorage.getItem("orgativa_lang");
-    return (saved === "en" || saved === "bn") ? saved : "en";
-  });
+  const [lang, setLangState] = useState<Language>("en");
 
   useEffect(() => {
-    localStorage.setItem("orgativa_lang", lang);
-    document.documentElement.lang = lang;
-  }, [lang]);
+    localStorage.setItem("orgativa_lang", "en");
+    document.documentElement.lang = "en";
+  }, []);
 
   const setLang = (newLang: Language) => {
-    setLangState(newLang);
+    setLangState("en");
   };
 
   const toggleLang = () => {
-    setLangState((prev) => (prev === "bn" ? "en" : "bn"));
+    setLangState("en");
   };
 
   const t = (bnText: string, enText: string): string => {
-    if (lang === "bn") return bnText || enText;
     return enText || bnText;
   };
 
   const formatNum = (num: number | string): string => {
-    const str = String(num);
-    if (lang === "bn") {
-      return str.replace(/\d/g, (digit) => banglaDigits[parseInt(digit, 10)]);
-    }
-    return str;
+    return String(num);
   };
 
   const formatPrice = (price: number): string => {
-    if (lang === "bn") {
-      const bnStr = price.toLocaleString("en-US").replace(/\d/g, (d) => banglaDigits[parseInt(d, 10)]);
-      return `৳${bnStr}`;
-    }
     return `৳${price.toLocaleString("en-US")}`;
   };
 
