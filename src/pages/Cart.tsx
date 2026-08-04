@@ -1,23 +1,26 @@
 import { useLocation } from "wouter";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { getProductName, getProductCategory, getProductWeight } from "@/data/products";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useResponsive } from "@/hooks/use-responsive";
 
 const P = "#2D5A27";
-const DELIVERY_THRESHOLD = 1000;
-const DELIVERY_CHARGE = 60;
 
 export default function Cart() {
   const [, navigate] = useLocation();
   const { items, removeItem, updateQuantity, subtotal, totalItems } = useCart();
   const { isMobile } = useResponsive();
   const { lang, t, formatPrice, formatNum } = useLanguage();
+  const { getSetting } = useSiteSettings();
 
-  const deliveryFree = subtotal >= DELIVERY_THRESHOLD;
-  const deliveryCharge = deliveryFree ? 0 : DELIVERY_CHARGE;
+  const deliveryThreshold = Number(getSetting("delivery_free_threshold", "1500")) || 1500;
+  const defaultCharge = Number(getSetting("delivery_inside_dhaka", "60")) || 60;
+
+  const deliveryFree = subtotal >= deliveryThreshold;
+  const deliveryCharge = deliveryFree ? 0 : defaultCharge;
   const total = subtotal + deliveryCharge;
   const savings = items.reduce((sum, i) =>
     i.product.originalPrice ? sum + (i.product.originalPrice - i.product.price) * i.quantity : sum, 0);
@@ -49,13 +52,13 @@ export default function Cart() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#434843" }}>
                       {t("বিনামূল্যে ডেলিভারির জন্য আরও ", "Add ")}
-                      <strong style={{ color: P }}>{formatPrice(DELIVERY_THRESHOLD - subtotal)}</strong>
+                      <strong style={{ color: P }}>{formatPrice(deliveryThreshold - subtotal)}</strong>
                       {t(" যোগ করুন", " more for free shipping")}
                     </span>
                     <span className="material-symbols-outlined" style={{ fontSize: 18, color: P }}>local_shipping</span>
                   </div>
                   <div style={{ height: 5, backgroundColor: "#E8E8E8", borderRadius: 999 }}>
-                    <div style={{ height: "100%", width: `${Math.min(100, (subtotal / DELIVERY_THRESHOLD) * 100)}%`, backgroundColor: P, borderRadius: 999, transition: "width 0.4s" }} />
+                    <div style={{ height: "100%", width: `${Math.min(100, (subtotal / deliveryThreshold) * 100)}%`, backgroundColor: P, borderRadius: 999, transition: "width 0.4s" }} />
                   </div>
                 </div>
               )}

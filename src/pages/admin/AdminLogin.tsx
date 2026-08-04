@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useLocation } from "wouter";
 import Logo from "@/components/Logo";
@@ -13,6 +13,20 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (localStorage.getItem("orgativa_demo_admin") === "true") {
+      navigate("/admin/dashboard");
+      return;
+    }
+    if (supabase) {
+      supabase.auth.getUser().then(({ data }) => {
+        if (data?.user) {
+          navigate("/admin/dashboard");
+        }
+      });
+    }
+  }, [navigate]);
 
   function enterDemoMode() {
     localStorage.setItem("orgativa_demo_admin", "true");
@@ -90,10 +104,10 @@ export default function AdminLogin() {
             <Logo size={42} />
           </div>
           <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 22, fontWeight: 800, color: "#111827", margin: "0 0 6px" }}>
-            অর্গানি কেন্ট্রল হাব
+            Orgativa Control Center
           </h1>
           <p style={{ fontSize: 13, color: "#6B726A", fontFamily: "'Inter',sans-serif", fontWeight: 500, margin: 0 }}>
-            অনুগ্রহ করে সিস্টেমে আপনার প্রাধিকার নিশ্চিত করুন
+            Please authenticate to access system management
           </p>
         </div>
 
@@ -118,7 +132,7 @@ export default function AdminLogin() {
                 color: "#6B726A", 
                 fontFamily: "'Inter',sans-serif" 
               }}>
-                ইমেইল আইডি
+                Email Address
               </label>
               
               <div style={{ 
@@ -163,7 +177,7 @@ export default function AdminLogin() {
                 color: "#6B726A", 
                 fontFamily: "'Inter',sans-serif" 
               }}>
-                নিরাপত্তা পাসওয়ার্ড
+                Password
               </label>
               
               <div style={{ 
@@ -242,7 +256,7 @@ export default function AdminLogin() {
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <>
-                  <span>নিরাপদ লগইন</span>
+                  <span>Secure Login</span>
                   <ArrowRight size={16} />
                 </>
               )}

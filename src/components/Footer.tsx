@@ -3,6 +3,21 @@ import { useLocation } from "wouter";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useLanguage } from "@/context/LanguageContext";
 import Logo from "@/components/Logo";
+import { 
+  ShieldCheck, 
+  Leaf, 
+  FlaskConical, 
+  Award, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  Globe, 
+  MessageSquare, 
+  Smartphone, 
+  Play, 
+  CheckCircle2, 
+  ChevronRight 
+} from "lucide-react";
 
 const P = "#2D5A27";
 const BG = "#0D1F0B";
@@ -50,10 +65,10 @@ export default function Footer() {
   ];
 
   const certBadges = [
-    { labelBn: "অর্গানিক\nপ্রত্যয়িত", labelEn: "Certified\nOrganic", icon: "verified" },
-    { labelBn: "কীটনাশক\nমুক্ত", labelEn: "Pesticide\nFree", icon: "eco" },
-    { labelBn: "ল্যাব\nপরীক্ষিত", labelEn: "Lab\nTested", icon: "science" },
-    { labelBn: "খামার\nথেকে সরাসরি", labelEn: "Direct From\nFarmers", icon: "agriculture" },
+    { labelBn: "অর্গানিক\nপ্রত্যয়িত", labelEn: "Certified\nOrganic", icon: ShieldCheck },
+    { labelBn: "কীটনাশক\nমুক্ত", labelEn: "Pesticide\nFree", icon: Leaf },
+    { labelBn: "ল্যাব\nপরীক্ষিত", labelEn: "Lab\nTested", icon: FlaskConical },
+    { labelBn: "খামার\nথেকে সরাসরি", labelEn: "Direct From\nFarmers", icon: Award },
   ];
 
   function handleSubscribe(e: React.FormEvent) {
@@ -70,10 +85,11 @@ export default function Footer() {
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: `0 ${px}`, display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 0 }}>
           {certBadges.map((b, i) => {
             const badgeLabel = lang === "en" ? b.labelEn : b.labelBn;
+            const Icon = b.icon;
             return (
               <div key={b.labelEn} style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14, paddingTop: isMobile ? 16 : 22, paddingBottom: isMobile ? 16 : 22, borderRight: (!isMobile && i < 3) ? "1px solid rgba(255,255,255,0.07)" : "none", borderBottom: (isMobile && i < 2) ? "1px solid rgba(255,255,255,0.07)" : "none", paddingLeft: (!isMobile && i > 0) ? 28 : 0, paddingRight: (!isMobile && i < 3) ? 28 : 0 }}>
                 <div style={{ width: isMobile ? 36 : 42, height: isMobile ? 36 : 42, borderRadius: 12, backgroundColor: "rgba(45,90,39,0.35)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: isMobile ? 18 : 22, color: "#9ACA94" }}>{b.icon}</span>
+                  <Icon size={isMobile ? 18 : 22} className="text-[#9ACA94]" />
                 </div>
                 <p style={{ fontSize: isMobile ? 11 : 13, fontWeight: 700, color: "#fff", fontFamily: "'Inter',sans-serif", margin: 0, lineHeight: 1.3 }}>
                   {badgeLabel.split("\n").map((line, j) => <span key={j}>{line}{j === 0 && <br />}</span>)}
@@ -104,7 +120,7 @@ export default function Footer() {
 
           {subscribed ? (
             <div style={{ display: "flex", alignItems: "center", gap: 12, backgroundColor: "rgba(45,90,39,0.25)", border: "1px solid rgba(45,90,39,0.4)", borderRadius: 14, padding: "16px 24px" }}>
-              <span className="material-symbols-outlined" style={{ color: "#9ACA94", fontSize: 24 }}>check_circle</span>
+              <CheckCircle2 size={24} className="text-[#9ACA94]" />
               <div>
                 <p style={{ fontSize: 14, fontWeight: 700, color: "#9ACA94", fontFamily: "'Inter',sans-serif", margin: 0 }}>
                   {t("সাবস্ক্রাইব হয়েছে!", "Subscribed!")}
@@ -143,24 +159,24 @@ export default function Footer() {
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
               {[
-                { icon: "location_on", text: t("বাড়ি ১২, রোড ৫, বসুন্ধরা আ/এ, ঢাকা-১২২৯", "House 12, Road 5, Bashundhara R/A, Dhaka-1229") },
-                { icon: "phone", text: "+880 1700-000000" },
-                { icon: "mail", text: "hello@orgativa.com.bd" },
-              ].map(({ icon, text }) => (
-                <div key={icon} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 14, color: "#6daf67", marginTop: 1, flexShrink: 0 }}>{icon}</span>
+                { icon: MapPin, text: t("বাড়ি ১২, রোড ৫, বসুন্ধরা আ/এ, ঢাকা-১২২৯", "House 12, Road 5, Bashundhara R/A, Dhaka-1229") },
+                { icon: Phone, text: "+880 1700-000000" },
+                { icon: Mail, text: "hello@orgativa.com.bd" },
+              ].map(({ icon: Icon, text }, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <Icon size={14} className="text-[#6daf67]" style={{ marginTop: 2, flexShrink: 0 }} />
                   <span style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>{text}</span>
                 </div>
               ))}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {[
-                { icon: "language", label: t("ওয়েবসাইট", "Website") },
-                { icon: "mail_outline", label: t("ইমেইল", "Email") },
-                { icon: "phone_android", label: t("ফোন", "Phone") },
-                { icon: "chat_bubble_outline", label: t("হোয়াটসঅ্যাপ", "WhatsApp") },
-              ].map(({ icon, label }) => (
-                <SocialBtn key={icon} icon={icon} label={label} />
+                { icon: Globe, label: t("ওয়েবসাইট", "Website"), href: "#" },
+                { icon: Mail, label: t("ইমেইল", "Email"), href: "mailto:hello@orgativa.com.bd" },
+                { icon: Phone, label: t("ফোন", "Phone"), href: "tel:+8801700000000" },
+                { icon: MessageSquare, label: t("হোয়াটসঅ্যাপ", "WhatsApp"), href: "https://wa.me/8801700000000" },
+              ].map(({ icon: Icon, label, href }) => (
+                <SocialBtn key={label} icon={Icon} label={label} href={href} />
               ))}
             </div>
           </div>
@@ -190,9 +206,9 @@ export default function Footer() {
                 <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, fontFamily: "'Inter',sans-serif", margin: "0 0 4px" }}>
                   {t("অ্যাপ ডাউনলোড", "DOWNLOAD APP")}
                 </p>
-                {[{ label: t("অ্যাপ স্টোর", "App Store"), icon: "phone_iphone" }, { label: t("গুগল প্লে", "Google Play"), icon: "android" }].map(({ label, icon }) => (
+                {[{ label: t("অ্যাপ স্টোর", "App Store"), icon: Smartphone }, { label: t("গুগল প্লে", "Google Play"), icon: Play }].map(({ label, icon: Icon }) => (
                   <button key={label} style={{ display: "flex", alignItems: "center", gap: 10, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 14px", cursor: "pointer", width: "100%" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: "rgba(255,255,255,0.5)" }}>{icon}</span>
+                    <Icon size={16} className="text-white/50" />
                     <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>{label}</span>
                   </button>
                 ))}
@@ -227,11 +243,11 @@ export default function Footer() {
   );
 }
 
-function SocialBtn({ icon, label }: { icon: string; label: string }) {
+function SocialBtn({ icon: Icon, label, href }: { icon: React.ComponentType<{ size: number; className?: string }>; label: string; href?: string }) {
   return (
-    <a href="#" aria-label={label}
+    <a href={href || "#"} aria-label={label}
       style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-      <span className="material-symbols-outlined" style={{ fontSize: 15, color: "rgba(255,255,255,0.4)" }}>{icon}</span>
+      <Icon size={15} className="text-white/40 hover:text-[#9ACA94] transition-colors duration-200" />
     </a>
   );
 }
@@ -260,7 +276,7 @@ function FooterLink({ label, onClick }: { label: string; onClick?: () => void })
   return (
     <a href="#" onClick={(e) => { e.preventDefault(); onClick?.(); }}
       style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "rgba(255,255,255,0.42)", fontFamily: "'Inter',sans-serif", textDecoration: "none" }}>
-      <span style={{ width: 4, height: 4, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.15)", flexShrink: 0 }} />
+      <ChevronRight size={12} className="text-white/25 flex-shrink-0" />
       {label}
     </a>
   );

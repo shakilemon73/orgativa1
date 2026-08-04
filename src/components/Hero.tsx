@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 const P = "#2D5A27";
 
@@ -15,6 +16,7 @@ export default function Hero() {
   const [, navigate] = useLocation();
   const { isMobile, isTablet, width } = useResponsive();
   const { lang, t } = useLanguage();
+  const { getSetting } = useSiteSettings();
 
   if (isMobile) {
     const statGap = width < 365 ? 10 : 20;
@@ -132,17 +134,14 @@ export default function Hero() {
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, backgroundColor: "#E8F5E3", border: "1.5px solid #C2E0BB", borderRadius: 999, padding: "6px 14px 6px 10px", marginBottom: 28 }}>
             <span style={{ display: "inline-block", width: 20, height: 20, lineHeight: "20px", textAlign: "center", fontSize: 14 }}>🌿</span>
             <span style={{ fontSize: 11, color: P, fontFamily: "'Inter',sans-serif", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-              {t("প্রতিষ্ঠিত ২০২৪ · বিশুদ্ধ উৎস", "EST. 2024 · PURE ORIGIN")}
+              {lang === "en" ? getSetting("hero_badge_en", "🌿 100% CERTIFIED PURE & ORGANIC HARVEST") : getSetting("hero_badge_bn", "🌿 ১০০% খাঁটি অর্গানিক অ্যান্ড ল্যাব সার্টিফাইড")}
             </span>
           </div>
-          <h1 style={{ fontFamily: "'Noto Serif',serif", fontSize: isTablet ? "clamp(28px,3.5vw,40px)" : "clamp(38px,4.2vw,58px)", color: "#0D1F0B", lineHeight: 1.08, letterSpacing: "-0.025em", fontWeight: 400, margin: "0 0 8px" }}>
-            {t("বিশুদ্ধ উৎস।", "Pure Source.")}<br />{t("সুস্থ জীবন।", "Healthy Life.")}
+          <h1 style={{ fontFamily: "'Noto Serif',serif", fontSize: isTablet ? "clamp(28px,3.5vw,40px)" : "clamp(38px,4.2vw,58px)", color: "#0D1F0B", lineHeight: 1.08, letterSpacing: "-0.025em", fontWeight: 600, margin: "0 0 16px" }}>
+            {lang === "en" ? getSetting("hero_title_en", "100% Pure, Unadulterated Organic Nutrition for Your Family") : getSetting("hero_title_bn", "প্রাকৃতিক, বিশুদ্ধ ও প্রিমিয়াম অর্গানিক খাদ্য উপাদান")}
           </h1>
-          <h1 style={{ fontFamily: "'Noto Serif',serif", fontSize: isTablet ? "clamp(28px,3.5vw,40px)" : "clamp(38px,4.2vw,58px)", color: P, lineHeight: 1.08, letterSpacing: "-0.025em", fontWeight: 600, fontStyle: "italic", margin: "0 0 24px" }}>
-            {t("১০০% অর্গানিক।", "100% Organic.")}
-          </h1>
-          <p style={{ fontFamily: "'Inter',sans-serif", fontSize: isTablet ? 14 : 16, color: "#4A5548", maxWidth: 420, lineHeight: 1.75, margin: "0 0 28px" }}>
-            {t("বাংলাদেশের সেরা খামার থেকে হাতে বাছাই করা — কীটনাশকমুক্ত, ল্যাব-প্রত্যয়িত, তাজা পণ্য।", "Hand-harvested from Bangladesh's finest organic farms — pesticide-free, lab-certified, fresh organic goods.")}
+          <p style={{ fontFamily: "'Inter',sans-serif", fontSize: isTablet ? 14 : 16, color: "#4A5548", maxWidth: 440, lineHeight: 1.75, margin: "0 0 28px" }}>
+            {lang === "en" ? getSetting("hero_subtitle_en", "Directly sourced from organic certified farms. Pure honey, raw ghee, premium nuts & herbal wellness delivered right to your home.") : getSetting("hero_subtitle_bn", "সরাসরি খামার থেকে ল্যাব-পরীক্ষিত শতভাগ প্রাকৃতিক মধু, ঘি, ড্রাই ফ্রুটস ও হার্বাল পণ্য পৌঁছে দিচ্ছি আপনার দুয়ারে।")}
           </p>
           {!isTablet && (
             <div style={{ display: "flex", gap: 16, marginBottom: 32, flexWrap: "wrap" }}>

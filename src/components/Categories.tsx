@@ -4,6 +4,7 @@ import { getCategoryLabel, type Category } from "@/data/products";
 import { useCategories } from "@/lib/supabase-hooks";
 import { useLanguage } from "@/context/LanguageContext";
 import { useResponsive } from "@/hooks/use-responsive";
+import { CategoryIcon } from "@/components/CategoryIcons";
 
 const P = "#2D5A27";
 
@@ -60,11 +61,13 @@ function MobileCategoryPill({ cat, onClick, lang }: { cat: Category; onClick: ()
   const label = getCategoryLabel(cat, lang);
   return (
     <button onClick={onClick}
-      style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "12px 16px", borderRadius: 12, backgroundColor: "#fff", border: "1px solid #E8E8E8", cursor: "pointer", flexShrink: 0, minWidth: 72, transition: "all 0.2s" }}
+      style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "12px 16px", borderRadius: 14, backgroundColor: "#fff", border: "1.5px solid #EAF0E9", cursor: "pointer", flexShrink: 0, minWidth: 78, transition: "all 0.2s", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}
       onTouchStart={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#DFF2D8"; (e.currentTarget as HTMLElement).style.borderColor = P; }}
-      onTouchEnd={(e) => { setTimeout(() => { (e.currentTarget as HTMLElement).style.backgroundColor = "#fff"; (e.currentTarget as HTMLElement).style.borderColor = "#E8E8E8"; }, 200); }}>
-      <span className="material-symbols-outlined" style={{ fontSize: 22, color: "#737973" }}>{cat.icon}</span>
-      <span style={{ fontSize: 10, fontWeight: 600, color: "#434843", fontFamily: "'Inter',sans-serif", textAlign: "center", lineHeight: 1.2, whiteSpace: "nowrap" }}>{label}</span>
+      onTouchEnd={(e) => { setTimeout(() => { (e.currentTarget as HTMLElement).style.backgroundColor = "#fff"; (e.currentTarget as HTMLElement).style.borderColor = "#EAF0E9"; }, 200); }}>
+      <div style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: "#F2F7F1", display: "flex", alignItems: "center", justifyContent: "center", color: P }}>
+        <CategoryIcon slug={cat.slug} size={20} color={P} />
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 600, color: "#2B332A", fontFamily: "'Inter',sans-serif", textAlign: "center", lineHeight: 1.2, whiteSpace: "nowrap" }}>{label}</span>
     </button>
   );
 }
@@ -74,9 +77,11 @@ function CategoryPill({ cat, onClick, lang }: { cat: Category; onClick: () => vo
   const label = getCategoryLabel(cat, lang);
   return (
     <button onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "14px 8px", borderRadius: 12, backgroundColor: hovered ? "#DFF2D8" : "#fff", border: hovered ? `1px solid ${P}` : "1px solid #E8E8E8", cursor: "pointer", transition: "all 0.2s" }}>
-      <span className="material-symbols-outlined" style={{ fontSize: 24, color: hovered ? P : "#737973" }}>{cat.icon}</span>
-      <span style={{ fontSize: 11, fontWeight: 600, color: hovered ? P : "#434843", fontFamily: "'Inter',sans-serif", textAlign: "center", lineHeight: 1.2 }}>{label}</span>
+      style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "16px 10px", borderRadius: 14, backgroundColor: hovered ? "#EBF4EA" : "#fff", border: hovered ? `1.5px solid ${P}` : "1.5px solid #EAF0E9", cursor: "pointer", transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)", boxShadow: hovered ? "0 6px 18px rgba(45,90,39,0.12)" : "0 2px 6px rgba(0,0,0,0.02)" }}>
+      <div style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: hovered ? P : "#F2F7F1", display: "flex", alignItems: "center", justifyContent: "center", color: hovered ? "#fff" : P, transition: "all 0.2s" }}>
+        <CategoryIcon slug={cat.slug} size={22} color={hovered ? "#fff" : P} />
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 600, color: hovered ? P : "#2B332A", fontFamily: "'Inter',sans-serif", textAlign: "center", lineHeight: 1.2 }}>{label}</span>
     </button>
   );
 }

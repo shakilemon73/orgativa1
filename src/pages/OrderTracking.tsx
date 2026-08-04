@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { useResponsive } from "@/hooks/use-responsive";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -49,6 +50,7 @@ export default function OrderTracking() {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   const { lang, t, formatPrice, formatNum } = useLanguage();
+  const { getSetting } = useSiteSettings();
   const { isMobile, isTablet, width } = useResponsive();
   const [, navigate] = useLocation();
 
@@ -184,13 +186,14 @@ export default function OrderTracking() {
   };
 
   // WhatsApp helpers
+  const waNumber = getSetting("contact_whatsapp", getSetting("contact_phone", "8801700000000")).replace(/\D/g, "");
   const getWhatsAppLink = (order: any) => {
     const message = encodeURIComponent(
       lang === "bn" 
         ? `হ্যালো Orgativa! আমি আমার অর্ডার #${order.order_number} সম্পর্কে জানতে চাচ্ছি।` 
         : `Hello Orgativa! I'd like to ask about my order #${order.order_number}.`
     );
-    return `https://wa.me/8801700000000?text=${message}`;
+    return `https://wa.me/${waNumber}?text=${message}`;
   };
 
   return (
@@ -350,7 +353,7 @@ export default function OrderTracking() {
                 {t("ডেমো অর্ডার দেখুন", "View Demo Tracking")}
               </button>
               <a
-                href="https://wa.me/8801700000000"
+                href={`https://wa.me/${waNumber}`}
                 target="_blank"
                 rel="noreferrer"
                 style={{ backgroundColor: "#25D366", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}

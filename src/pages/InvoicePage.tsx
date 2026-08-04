@@ -156,10 +156,24 @@ export default function InvoicePage() {
             if (settingsData) {
               const mapped: Record<string, string> = {};
               settingsData.forEach((s) => {
-                if (s.key.startsWith("invoice_")) {
-                  mapped[s.key] = s.value;
-                }
+                mapped[s.key] = s.value;
               });
+
+              // Extract contact details
+              const phone = mapped.contact_phone || mapped.site_phone || "";
+              const email = mapped.contact_email || mapped.site_email || "";
+              const address = mapped.contact_address || "";
+
+              if (phone || email || address) {
+                const parts = [];
+                if (address) parts.push(address);
+                if (phone) parts.push(`Hotline: ${phone}`);
+                if (email) parts.push(email);
+                if (!mapped.invoice_address || mapped.invoice_address.includes("1700-000000") || mapped.invoice_address.includes("info@orgativa.com")) {
+                  mapped.invoice_address = parts.join(" | ");
+                }
+              }
+
               setPdfSettings((prev) => ({ ...prev, ...mapped }));
             }
           } catch (sErr) {

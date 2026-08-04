@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "./AdminLayout";
+import ImageUploader from "@/components/ImageUploader";
 import { supabase, DbCategory } from "@/lib/supabase";
 import { useLanguage } from "@/context/LanguageContext";
 import { getCategoryLabel } from "@/data/products";
@@ -128,15 +129,15 @@ export default function AdminCategories() {
     try {
       if (editId) {
         await supabase.from("categories").update(payload).eq("id", editId);
-        showToast(t("বিভাগ সংশোধন সফল হয়েছে।", "Category successfully updated."));
+        showToast("Category successfully updated.");
       } else {
         await supabase.from("categories").insert(payload);
-        showToast(t("নতুন বিভাগ যুক্ত হয়েছে।", "New category added successfully."));
+        showToast("New category added successfully.");
       }
       setShowForm(false);
       load();
     } catch {
-      showToast(t("সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।", "Failed to save category."));
+      showToast("Failed to save category.");
     } finally {
       setSaving(false);
     }
@@ -144,13 +145,13 @@ export default function AdminCategories() {
 
   async function deleteCategory(id: string, label: string) {
     if (!supabase) return;
-    if (!confirm(t(`"${label}" মুছে ফেলতে চান? এই ক্যাটাগরির পণ্যগুলো এতিম হয়ে যেতে পারে।`, `Are you sure you want to delete "${label}"? Products linked to this category may lose their classification.`))) return;
+    if (!confirm(`Are you sure you want to delete "${label}"? Products linked to this category may lose their classification.`)) return;
     try {
       await supabase.from("categories").delete().eq("id", id);
       setCategories((prev) => prev.filter((c) => c.id !== id));
-      showToast(t("বিভাগ মুছে ফেলা হয়েছে।", "Category successfully deleted."));
+      showToast("Category successfully deleted.");
     } catch {
-      showToast(t("মুছে ফেলা সম্ভব হয়নি।", "Failed to delete category."));
+      showToast("Failed to delete category.");
     }
   }
 
@@ -160,7 +161,7 @@ export default function AdminCategories() {
   const totalCategoryProducts = categories.reduce((sum, c) => sum + (Number(c.product_count) || 0), 0);
 
   return (
-    <AdminLayout title={t("পণ্য বিভাগ সমূহ", "Product Classification & Categories")}>
+    <AdminLayout title="Product Classification & Categories">
       {/* Premium Elegant Toast Notification */}
       {toast && (
         <div style={{ 
@@ -190,9 +191,6 @@ export default function AdminCategories() {
         
         {/* TOP METRIC BANNER */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 24,
           marginBottom: 28
         }} className="admin-grid-2">
           
@@ -220,10 +218,10 @@ export default function AdminCategories() {
             </div>
             <div>
               <p style={{ fontSize: 10, fontWeight: 700, color: "#6B726A", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 2px" }}>
-                {t("মোট সক্রিয় ক্যাটাগরি", "Active Shelf Shelves")}
+                Active Shelves
               </p>
               <p style={{ fontSize: 18, fontWeight: 800, color: "#111827", margin: 0, fontFamily: "'Inter', sans-serif" }}>
-                {formatNum(categories.length)} {t("টি সক্রিয় বিভাগ", "Active Shelves")}
+                {formatNum(categories.length)} Active Shelves
               </p>
             </div>
           </div>
@@ -252,10 +250,10 @@ export default function AdminCategories() {
             </div>
             <div>
               <p style={{ fontSize: 10, fontWeight: 700, color: "#6B726A", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 2px" }}>
-                {t("মোট পণ্য কভারেজ", "Aggregated Products linked")}
+                Aggregated Products Linked
               </p>
               <p style={{ fontSize: 18, fontWeight: 800, color: "#111827", margin: 0, fontFamily: "'Inter', sans-serif" }}>
-                {formatNum(totalCategoryProducts)}+ {t("টি পণ্য সংযোগ", "Linked Catalog items")}
+                {formatNum(totalCategoryProducts)}+ Linked Catalog Items
               </p>
             </div>
           </div>
@@ -266,10 +264,10 @@ export default function AdminCategories() {
         <div style={{ display: "flex", gap: 16, justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
           <div>
             <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              📋 {t("বিভাগ তালিকা", "CATALOG SECTIONS")}
+              📋 CATALOG SECTIONS
             </h3>
             <p style={{ fontSize: 12, color: "#6B726A", margin: "2px 0 0", fontFamily: "'Inter', sans-serif" }}>
-              {t("পণ্যগুলোকে কাস্টমারের সুবিধার্থে বিভিন্ন সেলফ ক্যাটাগরিতে বিভক্ত করুন", "Classify your organic line into premium subcategories on the main storefront")}
+              Classify your organic line into premium subcategories on the main storefront
             </p>
           </div>
 
@@ -294,7 +292,7 @@ export default function AdminCategories() {
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = P; e.currentTarget.style.transform = "none"; }}
           >
             <Plus size={16} />
-            {t("নতুন বিভাগ যুক্ত করুন", "Add Classification")}
+            Add Classification
           </button>
         </div>
 
@@ -317,6 +315,8 @@ export default function AdminCategories() {
               padding: 36, 
               width: "100%", 
               maxWidth: 520, 
+              maxHeight: "90vh",
+              overflowY: "auto",
               boxShadow: "0 24px 64px rgba(12,30,10,0.15)",
               border: "1px solid #EEF2ED"
             }}>
@@ -334,10 +334,10 @@ export default function AdminCategories() {
                     display: "inline-block",
                     marginBottom: 6
                   }}>
-                    {t("বিভাগ কনফিগারেশন", "SHELF REGISTRY")}
+                    SHELF REGISTRY
                   </span>
                   <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111827", fontFamily: "'Inter',sans-serif", margin: 0 }}>
-                    {editId ? t("বিভাগের তথ্য পরিবর্তন করুন", "Edit Category Registry") : t("নতুন ক্যাটাগরি তৈরি করুন", "Create New Catalog Category")}
+                    {editId ? "Edit Category Registry" : "Create New Catalog Category"}
                   </h3>
                 </div>
                 <button 
@@ -349,10 +349,10 @@ export default function AdminCategories() {
               </div>
 
               <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div className="admin-grid-2" style={{ gap: 16 }}>
                   <div>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#4B5563", fontFamily: "'Inter',sans-serif", marginBottom: 6 }}>
-                      {t("বিভাগের নাম (বাংলা) *", "Category Name *")}
+                      Category Name *
                     </label>
                     <input 
                       style={inStyle} 
@@ -365,7 +365,7 @@ export default function AdminCategories() {
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#4B5563", fontFamily: "'Inter',sans-serif", marginBottom: 6 }}>
-                      {t("স্লাগ (Slug) *", "Slug / URL Identifier *")}
+                      Slug / URL Identifier *
                     </label>
                     <input 
                       style={inStyle} 
@@ -379,7 +379,7 @@ export default function AdminCategories() {
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#4B5563", fontFamily: "'Inter',sans-serif", marginBottom: 6 }}>
-                      {t("আইকন কিওয়ার্ড", "Material/Lucide Icon")}
+                      Material/Lucide Icon
                     </label>
                     <input 
                       style={inStyle} 
@@ -392,7 +392,7 @@ export default function AdminCategories() {
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#4B5563", fontFamily: "'Inter',sans-serif", marginBottom: 6 }}>
-                      {t("অনুমানিক পণ্য সংখ্যা", "Product Count Override")}
+                      Product Count Override
                     </label>
                     <input 
                       style={inStyle} 
@@ -408,7 +408,7 @@ export default function AdminCategories() {
 
                 <div>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#4B5563", fontFamily: "'Inter',sans-serif", marginBottom: 6 }}>
-                    {t("ডিসপ্লে ক্রম (Display Order)", "Sorting Priority Display Order")}
+                    Sorting Priority Display Order
                   </label>
                   <input 
                     style={inStyle} 
@@ -422,16 +422,11 @@ export default function AdminCategories() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#4B5563", fontFamily: "'Inter',sans-serif", marginBottom: 6 }}>
-                    {t("ক্যাটাগরি কভার ছবি URL", "Cover Image Illustration URL")}
-                  </label>
-                  <input 
-                    style={inStyle} 
+                  <ImageUploader 
+                    label="Cover Image Illustration" 
                     value={form.image_url} 
-                    placeholder="https://..." 
-                    onChange={(e) => set("image_url", e.target.value)} 
-                    onFocus={(e) => (e.target.style.borderColor = P)} 
-                    onBlur={(e) => (e.target.style.borderColor = "#E5EFE2")} 
+                    onChange={(url) => set("image_url", url)} 
+                    folder="categories"
                   />
                 </div>
 
@@ -448,7 +443,7 @@ export default function AdminCategories() {
                       fontFamily: "'Inter',sans-serif",
                       color: "#4B5563"
                     }}>
-                    {t("বাতিল", "Cancel")}
+                    Cancel
                   </button>
                   <button type="submit" disabled={saving}
                     style={{ 
@@ -462,7 +457,7 @@ export default function AdminCategories() {
                       fontFamily: "'Inter',sans-serif", 
                       cursor: saving ? "not-allowed" : "pointer" 
                     }}>
-                    {saving ? t("সংরক্ষণ হচ্ছে...", "Saving Registry...") : t("সংরক্ষণ করুন", "Confirm Registry")}
+                    {saving ? "Saving Registry..." : "Confirm Registry"}
                   </button>
                 </div>
               </form>
@@ -479,10 +474,10 @@ export default function AdminCategories() {
           boxShadow: "0 4px 24px rgba(0,0,0,0.01)" 
         }}>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
               <thead>
                 <tr style={{ backgroundColor: "#FAFBF9", borderBottom: "1px solid #EEF2ED" }}>
-                  {["", t("বিভাগের নাম (ক্যাটালগ লেবেল)", "Category Name & Label"), t("ইউআরএল স্লাগ", "Route Identifier Slug"), t("মোট পণ্য লিংক সংখ্যা", "Product Distribution"), t("অগ্রাধিকার ডিসপ্লে ক্রম", "Display Weight Order"), t("কাজসমূহ", "Actions")].map((h, idx) => (
+                  {["", "Category Name & Label", "Route Identifier Slug", "Product Distribution", "Display Weight Order", "Actions"].map((h, idx) => (
                     <th key={idx} style={{ 
                       padding: "16px 24px", 
                       textAlign: "left", 
@@ -511,10 +506,10 @@ export default function AdminCategories() {
                 ) : categories.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ padding: 48, textAlign: "center", color: "#6B726A", fontFamily: "'Inter',sans-serif" }}>
-                      {t("কোনো পণ্য বিভাগ পাওয়া যায়নি।", "No categories configured in your inventory database.")}
+                      No categories configured in your inventory database.
                     </td>
                   </tr>
-                ) : categories.map((c, i) => (
+                ) : categories.map((c) => (
                   <tr key={c.id} 
                     style={{ 
                       borderBottom: "1px solid #EEF2ED",
@@ -562,14 +557,14 @@ export default function AdminCategories() {
                     {/* Product Count */}
                     <td style={{ padding: "14px 24px" }}>
                       <span style={{ fontSize: 13, color: "#111827", fontFamily: "'Inter',sans-serif", fontWeight: 700 }}>
-                        {formatNum(c.product_count)}+ {t("টি পণ্য", "products")}
+                        {formatNum(c.product_count)}+ products
                       </span>
                     </td>
 
                     {/* Sorting Display order */}
                     <td style={{ padding: "14px 24px" }}>
                       <span style={{ fontSize: 12, color: "#6B726A", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-                        {t("অগ্রাধিকার নং:", "Priority #")} {formatNum(c.display_order)}
+                        Priority #{formatNum(c.display_order)}
                       </span>
                     </td>
 
@@ -577,7 +572,7 @@ export default function AdminCategories() {
                     <td style={{ padding: "14px 24px" }}>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={() => startEdit(c)}
-                          aria-label={t("বিভাগ কনফিগারেশন সংশোধন", "Edit category")}
+                          aria-label="Edit category"
                           style={{ 
                             width: 34, 
                             height: 34, 
@@ -597,7 +592,7 @@ export default function AdminCategories() {
                           <Edit size={14} />
                         </button>
                         <button onClick={() => deleteCategory(c.id, c.label)}
-                          aria-label={t("বিভাগ ক্যাটালগ থেকে বাদ দিন", "Delete category")}
+                          aria-label="Delete category"
                           style={{ 
                             width: 34, 
                             height: 34, 

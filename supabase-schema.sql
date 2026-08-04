@@ -120,7 +120,7 @@ CREATE TRIGGER site_settings_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================
--- ROW LEVEL SECURITY
+-- ROW LEVEL SECURITY & POLICIES
 -- ============================================================
 ALTER TABLE categories   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products     ENABLE ROW LEVEL SECURITY;
@@ -128,23 +128,46 @@ ALTER TABLE orders       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
 
--- Public: read categories, products, site_settings
-CREATE POLICY "Public read categories"    ON categories   FOR SELECT USING (true);
-CREATE POLICY "Public read products"      ON products     FOR SELECT USING (true);
+-- Clean existing policies to prevent conflicts
+DROP POLICY IF EXISTS "Public read categories" ON categories;
+DROP POLICY IF EXISTS "Public read products" ON products;
+DROP POLICY IF EXISTS "Public read site_settings" ON site_settings;
+DROP POLICY IF EXISTS "Public insert orders" ON orders;
+DROP POLICY IF EXISTS "Public read orders" ON orders;
+DROP POLICY IF EXISTS "Public insert order_items" ON order_items;
+DROP POLICY IF EXISTS "Public read order_items" ON order_items;
+DROP POLICY IF EXISTS "Admin all categories" ON categories;
+DROP POLICY IF EXISTS "Admin all products" ON products;
+DROP POLICY IF EXISTS "Admin all orders" ON orders;
+DROP POLICY IF EXISTS "Admin all order_items" ON order_items;
+DROP POLICY IF EXISTS "Admin all site_settings" ON site_settings;
+
+-- To make development and testing in Demo Admin Mode seamless without requiring Auth setup, 
+-- we allow public (anon & authenticated) full read and write access to these tables.
+-- For a highly-secured production store, you can delete the "Public write" policies and use 
+-- the authenticated-only queries as desired.
+
+-- 1. categories policies
+CREATE POLICY "Public read categories" ON categories FOR SELECT USING (true);
+CREATE POLICY "Public write categories" ON categories FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- 2. products policies
+CREATE POLICY "Public read products" ON products FOR SELECT USING (true);
+CREATE POLICY "Public write products" ON products FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- 3. site_settings policies
 CREATE POLICY "Public read site_settings" ON site_settings FOR SELECT USING (true);
+CREATE POLICY "Public write site_settings" ON site_settings FOR ALL TO public USING (true) WITH CHECK (true);
 
--- Public: insert orders (checkout) and read orders for tracking
-CREATE POLICY "Public insert orders"      ON orders      FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public read orders"        ON orders      FOR SELECT USING (true);
-CREATE POLICY "Public insert order_items" ON order_items FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public read order_items"   ON order_items FOR SELECT USING (true);
+-- 4. orders policies
+CREATE POLICY "Public read orders" ON orders FOR SELECT USING (true);
+CREATE POLICY "Public insert orders" ON orders FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public write orders" ON orders FOR ALL TO public USING (true) WITH CHECK (true);
 
--- Authenticated (admin): full access to all tables
-CREATE POLICY "Admin all categories"    ON categories   FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin all products"      ON products     FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin all orders"        ON orders       FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin all order_items"   ON order_items  FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin all site_settings" ON site_settings FOR ALL USING (auth.role() = 'authenticated');
+-- 5. order_items policies
+CREATE POLICY "Public read order_items" ON order_items FOR SELECT USING (true);
+CREATE POLICY "Public insert order_items" ON order_items FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public write order_items" ON order_items FOR ALL TO public USING (true) WITH CHECK (true);
 
 -- ============================================================
 -- INDEXES
@@ -274,3 +297,38 @@ INSERT INTO site_settings (key, value, label, group_name) VALUES
   ('promo_3_title',       '🚚 বিনামূল্যে ডেলিভারি',     'প্রমো ৩ শিরোনাম',              'promos'),
   ('promo_3_desc',        '৳১,০০০+ অর্ডারে',           'প্রমো ৩ বিবরণ',               'promos')
 ON CONFLICT (key) DO NOTHING;
+
+-- ============================================================
+-- STORAGE BUCKETS & POLICIES SETUP
+-- Run this in Supabase SQL Editor to enable public image uploads
+-- ============================================================
+
+-- 1. Create storage buckets if they do not exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES 
+  ('uploads', 'uploads', true),
+  ('images', 'images', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Clean existing storage policies
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Public Upload" ON storage.objects;
+DROP POLICY IF EXISTS "Public Update" ON storage.objects;
+DROP POLICY IF EXISTS "Public Delete" ON storage.objects;
+
+-- 3. Create public access policies for uploads and images buckets
+-- Allow anyone to read uploaded files
+CREATE POLICY "Public Access" ON storage.objects 
+  FOR SELECT TO public USING (bucket_id = 'uploads' OR bucket_id = 'images');
+
+-- Allow anyone to upload new files
+CREATE POLICY "Public Upload" ON storage.objects 
+  FOR INSERT TO public WITH CHECK (bucket_id = 'uploads' OR bucket_id = 'images');
+
+-- Allow anyone to update files
+CREATE POLICY "Public Update" ON storage.objects 
+  FOR UPDATE TO public USING (bucket_id = 'uploads' OR bucket_id = 'images');
+
+-- Allow anyone to delete files
+CREATE POLICY "Public Delete" ON storage.objects 
+  FOR DELETE TO public USING (bucket_id = 'uploads' OR bucket_id = 'images');

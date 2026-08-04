@@ -2,26 +2,33 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { useResponsive } from "@/hooks/use-responsive";
 import Logo from "@/components/Logo";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  WorldClassCategoryMenuIcon,
+  GroceryCategoryIcon,
+  WellnessCategoryIcon,
+  DryFruitsCategoryIcon,
+  HoneyCategoryIcon,
+  SpicesCategoryIcon,
+  TeaCoffeeCategoryIcon,
+  GrainsCategoryIcon,
+  AllProductsCategoryIcon,
+  CategoryIcon
+} from "@/components/CategoryIcons";
 import {
   ShoppingBag,
   Heart,
   User,
   Search,
-  Menu,
   X,
   Phone,
   Truck,
   ShieldCheck,
   ChevronRight,
-  Sprout,
   Sparkles,
-  Leaf,
-  Coffee,
-  Wheat,
-  Flame,
   Globe,
   Plus
 } from "lucide-react";
@@ -32,18 +39,19 @@ const P_LIGHT = "#F4F7F3";
 const ACCENT = "#6daf67";
 
 const navLinks = [
-  { icon: ShoppingBag, labelBn: "মুদিখানা", labelEn: "Grocery", slug: "grocery" },
-  { icon: Sprout, labelBn: "স্বাস্থ্য", labelEn: "Wellness", slug: "wellness" },
-  { icon: Leaf, labelBn: "শুকনো ফল", labelEn: "Dry Fruits", slug: "dry-fruits" },
-  { icon: Sparkles, labelBn: "মধু", labelEn: "Honey", slug: "honey" },
-  { icon: Flame, labelBn: "মশলা", labelEn: "Spices", slug: "spices" },
-  { icon: Coffee, labelBn: "চা ও কফি", labelEn: "Tea & Coffee", slug: "tea-coffee" },
-  { icon: Wheat, labelBn: "শস্য", labelEn: "Grains", slug: "grains" },
+  { icon: GroceryCategoryIcon, labelBn: "মুদিখানা", labelEn: "Grocery", slug: "grocery" },
+  { icon: WellnessCategoryIcon, labelBn: "স্বাস্থ্য", labelEn: "Wellness", slug: "wellness" },
+  { icon: DryFruitsCategoryIcon, labelBn: "শুকনো ফল", labelEn: "Dry Fruits", slug: "dry-fruits" },
+  { icon: HoneyCategoryIcon, labelBn: "মধু", labelEn: "Honey", slug: "honey" },
+  { icon: SpicesCategoryIcon, labelBn: "মশলা", labelEn: "Spices", slug: "spices" },
+  { icon: TeaCoffeeCategoryIcon, labelBn: "চা ও কফি", labelEn: "Tea & Coffee", slug: "tea-coffee" },
+  { icon: GrainsCategoryIcon, labelBn: "শস্য", labelEn: "Grains", slug: "grains" },
 ];
 
 export default function Header() {
   const { totalItems } = useCart();
   const { lang, setLang, t, formatNum } = useLanguage();
+  const { settings, getSetting } = useSiteSettings();
   const [, navigate] = useLocation();
   const [location] = useLocation();
   const [searchFocused, setSearchFocused] = useState(false);
@@ -127,13 +135,13 @@ export default function Header() {
       `}</style>
 
       {/* ── TOP ANNOUNCEMENT BAR ── */}
-      <div style={{ backgroundColor: "#FAFBF9", borderBottom: "1px solid #EAF0E9", fontSize: 11, color: "#4A5548", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: useCompactHeader ? "6px 16px" : `6px ${px}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ backgroundColor: "#FAFBF9", borderBottom: "1px solid #EAF0E9", fontSize: 11, color: "#4A5548", fontFamily: "'Inter', sans-serif", fontWeight: 500, overflow: "hidden" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: useCompactHeader ? "6px 12px" : `6px ${px}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {!useCompactHeader && (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 13, display: "inline-flex" }}>🌿</span>
               <span style={{ color: "#2D5A27", fontWeight: 600 }}>
-                {t("বাংলাদেশের ১০০% প্রিমিয়াম জৈব ও ল্যাব-পরীক্ষিত পণ্য", "100% Premium Organic & Lab-Tested Products in Bangladesh")}
+                {lang === "en" ? getSetting("promo_topbar_text_en", "100% Premium Organic & Lab-Tested Products in Bangladesh") : getSetting("promo_topbar_text_bn", "বাংলাদেশের ১০০% প্রিমিয়াম জৈব ও ল্যাব-পরীক্ষিত পণ্য")}
               </span>
             </div>
           )}
@@ -143,23 +151,19 @@ export default function Header() {
             alignItems: "center", 
             justifyContent: useCompactHeader ? "space-between" : "flex-end", 
             width: useCompactHeader ? "100%" : "auto", 
-            gap: useCompactHeader ? 8 : 16 
-          }}>
-            <a href="tel:+8801700000000" style={{ color: "#4A5548", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, transition: "color 0.2s" }} className="hover:text-primary">
-              <Phone size={12} style={{ color: P }} />
-              <span style={{ whiteSpace: "nowrap" }}>{useCompactHeader ? t("কল", "Call") : t("+৮৮০ ১৭০০-০০০০০০", "+880 1700-000000")}</span>
+            gap: useCompactHeader ? 6 : 16,
+            overflowX: "auto",
+            whiteSpace: "nowrap"
+          }} className="no-scrollbar">
+            <a href={`tel:${getSetting("contact_phone", "+880 1700-000000").replace(/\s+/g, "")}`} style={{ color: "#4A5548", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, transition: "color 0.2s", flexShrink: 0 }}>
+              <Phone size={12} style={{ color: P, flexShrink: 0 }} />
+              <span style={{ whiteSpace: "nowrap", fontSize: 11 }}>{useCompactHeader ? t("কল করুন", "Call Us") : getSetting("contact_phone", "+880 1700-000000")}</span>
             </a>
-            <div style={{ width: 1, height: 12, backgroundColor: "#D1E3CF" }} />
+            <div style={{ width: 1, height: 12, backgroundColor: "#D1E3CF", flexShrink: 0 }} />
             
-            <a href="/track" onClick={(e) => { e.preventDefault(); navigate("/track"); }} style={{ color: "#4A5548", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, transition: "color 0.2s" }}>
-              <Truck size={12} style={{ color: P }} />
-              <span style={{ whiteSpace: "nowrap" }}>{t("ট্র্যাক অর্ডার", "Track")}</span>
-            </a>
-            <div style={{ width: 1, height: 12, backgroundColor: "#D1E3CF" }} />
-            
-            <a href="/admin/login" onClick={(e) => { e.preventDefault(); navigate("/admin/login"); }} style={{ color: "#4A5548", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, transition: "color 0.2s" }}>
-              <ShieldCheck size={12} style={{ color: P }} />
-              <span style={{ whiteSpace: "nowrap" }}>{t("অ্যাডমিন", "Admin")}</span>
+            <a href="/track" onClick={(e) => { e.preventDefault(); navigate("/track"); }} style={{ color: "#4A5548", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, transition: "color 0.2s", flexShrink: 0 }}>
+              <Truck size={12} style={{ color: P, flexShrink: 0 }} />
+              <span style={{ whiteSpace: "nowrap", fontSize: 11 }}>{t("ট্র্যাক অর্ডার", "Track")}</span>
             </a>
 
             {!useCompactHeader && (
@@ -176,22 +180,25 @@ export default function Header() {
       <div style={{ 
         maxWidth: 1280, 
         margin: "0 auto", 
-        padding: useCompactHeader ? (width < 400 ? "10px 8px" : "10px 14px") : `12px ${px}` 
+        padding: useCompactHeader ? (width < 380 ? "10px 10px" : "10px 14px") : `12px ${px}`,
+        overflow: "hidden"
       }}>
         <div style={{ 
           display: "flex", 
           alignItems: "center", 
           justifyContent: "space-between", 
           flexWrap: "nowrap", 
-          gap: useCompactHeader ? (width < 360 ? 4 : 8) : 24 
+          gap: useCompactHeader ? (width < 360 ? 6 : 10) : 24,
+          width: "100%"
         }}>
           
           {/* Left: Hamburger menu (Mobile/Tablet only) + Logo */}
           <div style={{ 
             display: "flex", 
             alignItems: "center", 
-            gap: useCompactHeader ? (width < 360 ? 4 : 8) : 12, 
-            flexShrink: 0 
+            gap: useCompactHeader ? (width < 360 ? 6 : 8) : 12, 
+            flexShrink: 0,
+            minWidth: 0
           }}>
             {useCompactHeader && (
               <button 
@@ -203,12 +210,14 @@ export default function Header() {
                   justifyContent: "center",
                   width: 38,
                   height: 38,
-                  borderRadius: 10,
-                  border: "1.5px solid #E5EFE2",
+                  borderRadius: 11,
+                  border: "1.5px solid #E2EBE0",
                   backgroundColor: "#FAFBF9",
                   cursor: "pointer",
                   color: P,
-                  transition: "all 0.2s"
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+                  flexShrink: 0
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = P_LIGHT;
@@ -216,21 +225,16 @@ export default function Header() {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = "#FAFBF9";
-                  e.currentTarget.style.borderColor = "#E5EFE2";
+                  e.currentTarget.style.borderColor = "#E2EBE0";
                 }}
               >
-                {/* Custom Ultra-Premium Designer Hamburger Menu Icon */}
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transition: "all 0.2s" }}>
-                  <path d="M4 6H20" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                  <path d="M4 12H15" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                  <path d="M4 18H18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                </svg>
+                <WorldClassCategoryMenuIcon size={20} color={P} />
               </button>
             )}
             
             <a href="/" onClick={(e) => { e.preventDefault(); navigate("/"); }}
-              style={{ textDecoration: "none", display: "flex", alignItems: "center", userSelect: "none" }}>
-              <Logo size={useCompactHeader ? 34 : 42} showText={!useCompactHeader || width >= 430} />
+              style={{ textDecoration: "none", display: "flex", alignItems: "center", userSelect: "none", minWidth: 0, overflow: "hidden" }}>
+              <Logo size={useCompactHeader ? (width < 360 ? 30 : 34) : 42} showText={!useCompactHeader || width >= 400} />
             </a>
           </div>
 
@@ -399,39 +403,6 @@ export default function Header() {
             {/* Language switch on mobile/tablet to save space */}
             {useCompactHeader && <LanguageSwitcher lang={lang} setLang={setLang} />}
 
-            {/* Account Profile button on Desktop */}
-            {!useCompactHeader && (
-              <button 
-                onClick={() => navigate("/admin/dashboard")}
-                aria-label={t("অ্যাডমিন প্যানেল", "Admin Dashboard")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 42,
-                  height: 42,
-                  borderRadius: 12,
-                  border: "1.5px solid #FAFBF9",
-                  backgroundColor: "#FAFBF9",
-                  cursor: "pointer",
-                  color: "#4A5548",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#C2D9BC";
-                  e.currentTarget.style.backgroundColor = P_LIGHT;
-                  e.currentTarget.style.color = P;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "#FAFBF9";
-                  e.currentTarget.style.backgroundColor = "#FAFBF9";
-                  e.currentTarget.style.color = "#4A5548";
-                }}
-              >
-                <User size={19} />
-              </button>
-            )}
-
             {/* Premium World-Class Cart Button */}
             <button 
               onClick={() => navigate("/cart")} 
@@ -512,30 +483,36 @@ export default function Header() {
       {/* ── MOBILE/TABLET SEARCH LAYER ── */}
       {useCompactHeader && (
         <div style={{ 
-          padding: width < 400 ? "0 8px 10px 8px" : "0 16px 12px 16px", 
-          position: "relative" 
+          padding: width < 400 ? "0 10px 10px 10px" : "0 16px 12px 16px", 
+          position: "relative",
+          width: "100%",
+          boxSizing: "border-box" 
         }}>
-          <form onSubmit={handleSearchSubmit} style={{ position: "relative" }}>
+          <form onSubmit={handleSearchSubmit} style={{ position: "relative", width: "100%", margin: 0 }}>
             <div style={{
               display: "flex", 
               alignItems: "center",
               backgroundColor: "#FAFBF9",
-              border: searchFocused ? `2px solid ${P}` : "1.5px solid #E5EFE2",
-              borderRadius: 12, 
-              padding: "0 12px",
-              height: 42,
-              transition: "all 0.2s",
-              boxShadow: searchFocused ? "0 4px 12px rgba(45,90,39,0.08)" : "none"
+              border: searchFocused ? `2px solid ${P}` : "1.5px solid #E2EBE0",
+              borderRadius: 14, 
+              padding: "0 5px 0 12px",
+              height: 44,
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              boxShadow: searchFocused ? "0 4px 14px rgba(45,90,39,0.12)" : "none",
+              width: "100%",
+              boxSizing: "border-box"
             }}>
-              <Search size={16} style={{ color: searchFocused ? P : "#8BA088", marginRight: 8, flexShrink: 0 }} />
+              <Search size={17} style={{ color: searchFocused ? P : "#8BA088", marginRight: 8, flexShrink: 0 }} />
               <input 
                 type="text" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t("পণ্য খুঁজুন...", "Search products...")}
+                placeholder={t("১০০% অর্গানিক পণ্য খুঁজুন...", "Search organic products...")}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
                 style={{ 
+                  flex: "1 1 auto",
+                  minWidth: 0,
                   width: "100%", 
                   background: "transparent", 
                   border: "none", 
@@ -543,18 +520,45 @@ export default function Header() {
                   fontFamily: "'Inter', sans-serif", 
                   color: "#1A1C1C", 
                   outline: "none",
-                  fontWeight: 500
+                  fontWeight: 500,
+                  padding: "0 4px"
                 }} 
               />
               {searchQuery && (
                 <button 
                   type="button" 
                   onClick={() => setSearchQuery("")}
-                  style={{ border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 4, color: "#99a896" }}
+                  aria-label="Clear search query"
+                  style={{ border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 4, color: "#99a896", flexShrink: 0, marginRight: 2 }}
                 >
                   <X size={14} />
                 </button>
               )}
+              <button
+                type="submit"
+                aria-label="Search submit"
+                style={{
+                  border: "none",
+                  backgroundColor: P,
+                  color: "#fff",
+                  borderRadius: 10,
+                  height: 34,
+                  padding: "0 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: "'Inter', sans-serif",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  transition: "background-color 0.2s",
+                  boxShadow: "0 2px 6px rgba(45,90,39,0.2)"
+                }}
+              >
+                <span>{t("খুঁজুন", "Search")}</span>
+              </button>
             </div>
 
             {/* Suggestions dropdown on Mobile/Tablet */}
@@ -637,7 +641,7 @@ export default function Header() {
                     style={{ 
                       display: "flex", 
                       alignItems: "center", 
-                      gap: 6, 
+                      gap: 7, 
                       color: location === "/category/all" ? P : "#3E4A3B", 
                       fontSize: 13, 
                       fontWeight: location === "/category/all" ? 700 : 600, 
@@ -651,7 +655,7 @@ export default function Header() {
                     onMouseEnter={(e) => { if (location !== "/category/all") e.currentTarget.style.color = P; }}
                     onMouseLeave={(e) => { if (location !== "/category/all") e.currentTarget.style.color = "#3E4A3B"; }}
                   >
-                    <Sparkles size={14} style={{ opacity: 0.9, color: location === "/category/all" ? P : "#7C9079" }} />
+                    <AllProductsCategoryIcon size={18} color={location === "/category/all" ? P : "#7C9079"} />
                     <span>{t("সব পণ্য", "All Products")}</span>
                   </a>
                 </li>
@@ -668,7 +672,7 @@ export default function Header() {
                         style={{ 
                           display: "flex", 
                           alignItems: "center", 
-                          gap: 6, 
+                          gap: 7, 
                           color: active ? P : "#3E4A3B", 
                           fontSize: 13, 
                           fontWeight: active ? 700 : 600, 
@@ -682,7 +686,7 @@ export default function Header() {
                         onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = P; }}
                         onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "#3E4A3B"; }}
                       >
-                        <link.icon size={14} style={{ opacity: 0.9, color: active ? P : "#7C9079" }} />
+                        <link.icon size={18} color={active ? P : "#7C9079"} />
                         <span>{label}</span>
                       </a>
                     </li>
@@ -796,28 +800,41 @@ export default function Header() {
                 </p>
 
                 {/* Categories Links List */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 24 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 24 }}>
                   <button 
                     onClick={() => { navigate("/category/all"); setMobileMenuOpen(false); }}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      padding: "12px 14px",
-                      borderRadius: 10,
+                      padding: "10px 12px",
+                      borderRadius: 12,
                       border: "none",
-                      backgroundColor: location === "/category/all" ? "#EBF4EA" : "transparent",
+                      backgroundColor: location === "/category/all" ? "#EBF4EA" : "#FAFBF9",
                       color: location === "/category/all" ? P : "#1A1C1C",
                       cursor: "pointer",
                       textAlign: "left",
-                      width: "100%"
+                      width: "100%",
+                      transition: "all 0.2s"
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ display: "flex", width: 8, height: 8, borderRadius: "50%", backgroundColor: P }} />
-                      <span style={{ fontSize: 14, fontWeight: 600 }}>{t("সব পণ্য", "All Products")}</span>
+                      <div style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 10,
+                        backgroundColor: location === "/category/all" ? P : "#EAF0E9",
+                        color: location === "/category/all" ? "#fff" : P,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0
+                      }}>
+                        <AllProductsCategoryIcon size={16} color={location === "/category/all" ? "#fff" : P} />
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: location === "/category/all" ? 700 : 600, fontFamily: "'Inter', sans-serif" }}>{t("সব পণ্য", "All Products")}</span>
                     </div>
-                    <ChevronRight size={14} style={{ opacity: 0.6 }} />
+                    <ChevronRight size={15} style={{ opacity: 0.5, color: location === "/category/all" ? P : "#8BA088" }} />
                   </button>
 
                   {navLinks.map((link) => {
@@ -831,21 +848,34 @@ export default function Header() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          padding: "12px 14px",
-                          borderRadius: 10,
+                          padding: "10px 12px",
+                          borderRadius: 12,
                           border: "none",
-                          backgroundColor: active ? "#EBF4EA" : "transparent",
+                          backgroundColor: active ? "#EBF4EA" : "#FAFBF9",
                           color: active ? P : "#1A1C1C",
                           cursor: "pointer",
                           textAlign: "left",
-                          width: "100%"
+                          width: "100%",
+                          transition: "all 0.2s"
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <link.icon size={16} style={{ color: active ? P : "#7C9079" }} />
-                          <span style={{ fontSize: 14, fontWeight: 600 }}>{label}</span>
+                          <div style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 10,
+                            backgroundColor: active ? P : "#EAF0E9",
+                            color: active ? "#fff" : P,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0
+                          }}>
+                            <link.icon size={16} color={active ? "#fff" : P} />
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: active ? 700 : 600, fontFamily: "'Inter', sans-serif" }}>{label}</span>
                         </div>
-                        <ChevronRight size={14} style={{ opacity: 0.6 }} />
+                        <ChevronRight size={15} style={{ opacity: 0.5, color: active ? P : "#8BA088" }} />
                       </button>
                     );
                   })}
@@ -859,17 +889,13 @@ export default function Header() {
                 </p>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <a href="tel:+8801700000000" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "#4B5563", fontSize: 13, fontWeight: 500 }}>
+                  <a href={`tel:${getSetting("contact_phone", "+880 1700-000000").replace(/\s+/g, "")}`} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "#4B5563", fontSize: 13, fontWeight: 500 }}>
                     <Phone size={14} style={{ color: P }} />
-                    <span>+৮৮০ ১৭০০-০০০০০০</span>
+                    <span>{getSetting("contact_phone", "+880 1700-000000")}</span>
                   </a>
                   <a href="/track" onClick={(e) => { e.preventDefault(); navigate("/track"); }} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "#4B5563", fontSize: 13, fontWeight: 500 }}>
                     <Truck size={14} style={{ color: P }} />
                     <span>{t("অর্ডার ট্র্যাক করুন", "Track Order")}</span>
-                  </a>
-                  <a href="/admin/login" onClick={(e) => { e.preventDefault(); navigate("/admin/login"); }} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "#4B5563", fontSize: 13, fontWeight: 500 }}>
-                    <ShieldCheck size={14} style={{ color: P }} />
-                    <span>{t("অ্যাডমিন প্যানেল লগইন", "Admin Login")}</span>
                   </a>
                 </div>
               </div>
@@ -898,44 +924,17 @@ function LanguageSwitcher({ lang, setLang }: { lang: "bn" | "en"; setLang: (l: "
       display: "inline-flex", 
       alignItems: "center", 
       backgroundColor: "#EBF3EA", 
-      padding: "2px", 
-      borderRadius: 20, 
-      border: "1px solid #D1E3CF" 
+      padding: "3px 9px", 
+      borderRadius: 16, 
+      border: "1px solid #D1E3CF",
+      fontSize: 10,
+      fontWeight: 700,
+      color: P,
+      fontFamily: "'Inter', sans-serif",
+      gap: 4
     }}>
-      <button
-        type="button"
-        onClick={() => setLang("bn")}
-        style={{
-          padding: "3px 10px",
-          borderRadius: 16,
-          border: "none",
-          backgroundColor: lang === "bn" ? P : "transparent",
-          color: lang === "bn" ? "#fff" : "#2D5A27",
-          fontSize: 10,
-          fontWeight: 700,
-          fontFamily: "'Inter', sans-serif",
-          cursor: "pointer",
-          transition: "all 0.2s",
-        }}>
-        BN
-      </button>
-      <button
-        type="button"
-        onClick={() => setLang("en")}
-        style={{
-          padding: "3px 10px",
-          borderRadius: 16,
-          border: "none",
-          backgroundColor: lang === "en" ? P : "transparent",
-          color: lang === "en" ? "#fff" : "#2D5A27",
-          fontSize: 10,
-          fontWeight: 700,
-          fontFamily: "'Inter', sans-serif",
-          cursor: "pointer",
-          transition: "all 0.2s",
-        }}>
-        EN
-      </button>
+      <Globe size={11} style={{ color: P }} />
+      <span>EN</span>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "./AdminLayout";
+import ImageUploader from "@/components/ImageUploader";
 import { supabase, DbSiteSetting } from "@/lib/supabase";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { 
   Truck, 
   Phone, 
@@ -21,6 +23,7 @@ const P_DARK = "#1a4016";
 
 export default function AdminSettings() {
   const { t } = useLanguage();
+  const { refreshSettings } = useSiteSettings();
   const [settings, setSettings] = useState<DbSiteSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
@@ -28,12 +31,12 @@ export default function AdminSettings() {
   const [values, setValues] = useState<Record<string, string>>({});
 
   const GROUPS: Record<string, string> = {
-    delivery: t("ডেলিভারি", "Delivery Settings"),
-    contact:  t("যোগাযোগ", "Contact & Support"),
-    hero:     t("হিরো সেকশন", "Home Hero Visuals"),
-    promos:   t("প্রমো বার্তা", "Promo Banner Announcement"),
-    invoice:  t("ইনভয়েস ও পিডিএফ", "Invoice & Receipt customization"),
-    general:  t("সাধারণ", "General Preferences"),
+    delivery: "Delivery Settings",
+    contact:  "Contact & Support",
+    hero:     "Home Hero Visuals",
+    promos:   "Promo Banner Announcement",
+    invoice:  "Invoice & Receipt Customization",
+    general:  "General Preferences",
   };
 
   const GROUP_ICONS: Record<string, any> = {
@@ -52,17 +55,44 @@ export default function AdminSettings() {
     const { data } = await supabase.from("site_settings").select("*").order("group_name");
     const dbSettings = data ?? [];
 
-    const defaultInvoiceFields = [
-      { key: "invoice_title", value: "Orgativa", label: "ইনভয়েস ব্র্যান্ড নাম (Invoice Title / Brand)", group_name: "invoice" },
-      { key: "invoice_subtitle", value: "অর্গানিক ও প্রিমিয়াম ফুড সাপ্লিমেন্ট (Premium Organic Foods)", group_name: "invoice", label: "ইনভয়েস স্লোগান বা সাবটাইটেল (Slogan / Subtitle)" },
-      { key: "invoice_accent_color", value: "#2D5A27", group_name: "invoice", label: "ইনভয়েস থিম কালার (Accent Color Hex)" },
-      { key: "invoice_logo_url", value: "/assets/orgativa_logo.png", group_name: "invoice", label: "লোগো ইমেজ ইউআরএল (Logo Image URL)" },
-      { key: "invoice_address", value: "Banani, Dhaka-1213 | Hotline: +880 1700-000000 | info@orgativa.com", group_name: "invoice", label: "ঠিকানা ও কন্টাক্ট ইনফো (Address & Contact)" },
-      { key: "invoice_terms", value: "ধন্যবাদ Orgativa এর সাথে থাকার জন্য! আমাদের পণ্য শতভাগ প্রাকৃতিক ও স্বাস্থ্যসম্মত। কোনো কারণে রিফান্ড বা এক্সচেঞ্জ করতে চাইলে পণ্য পাওয়ার ৭ দিনের মধ্যে অরিজিনাল ইনভয়েস সহ যোগাযোগ করুন।", group_name: "invoice", label: "শর্তাবলী ও ফুটার মেসেজ (Terms & Footer Message)" }
+    const defaultFields = [
+      // Contact
+      { key: "contact_phone", value: "+880 1700-000000", label: "Contact Phone Number / Hotline", group_name: "contact" },
+      { key: "contact_email", value: "info@orgativa.com.bd", label: "Contact Support Email Address", group_name: "contact" },
+      { key: "contact_address", value: "House 12, Road 5, Bashundhara R/A, Dhaka-1229", label: "Store Physical Address", group_name: "contact" },
+      { key: "contact_whatsapp", value: "+8801700000000", label: "WhatsApp Order Number", group_name: "contact" },
+      { key: "facebook_page_url", value: "https://facebook.com", label: "Facebook Page URL", group_name: "contact" },
+
+      // Delivery
+      { key: "delivery_inside_dhaka", value: "60", label: "Delivery Charge Inside Dhaka (৳)", group_name: "delivery" },
+      { key: "delivery_outside_dhaka", value: "120", label: "Delivery Charge Outside Dhaka (৳)", group_name: "delivery" },
+      { key: "delivery_free_threshold", value: "1500", label: "Free Shipping Minimum Order Amount (৳)", group_name: "delivery" },
+      { key: "delivery_estimated_dhaka", value: "24-48 Hours", label: "Estimated Delivery Time (Inside Dhaka)", group_name: "delivery" },
+      { key: "delivery_estimated_outside", value: "2-4 Days", label: "Estimated Delivery Time (Outside Dhaka)", group_name: "delivery" },
+
+      // Hero
+      { key: "hero_title_bn", value: "প্রাকৃতিক, বিশুদ্ধ ও প্রিমিয়াম অর্গানিক খাদ্য উপাদান", label: "Hero Title (Bangla)", group_name: "hero" },
+      { key: "hero_title_en", value: "100% Pure, Unadulterated Organic Nutrition for Your Family", label: "Hero Title (English)", group_name: "hero" },
+      { key: "hero_subtitle_bn", value: "সরাসরি খামার থেকে ল্যাব-পরীক্ষিত শতভাগ প্রাকৃতিক মধু, ঘি, ড্রাই ফ্রুটস ও হার্বাল পণ্য পৌঁছে দিচ্ছি আপনার দুয়ারে।", label: "Hero Subtitle (Bangla)", group_name: "hero" },
+      { key: "hero_subtitle_en", value: "Directly sourced from organic certified farms. Pure honey, raw ghee, premium nuts & herbal wellness delivered right to your home.", label: "Hero Subtitle (English)", group_name: "hero" },
+      { key: "hero_badge_bn", value: "🌿 ১০০% খাঁটি অর্গানিক অ্যান্ড ল্যাব সার্টিফাইড", label: "Hero Badge Tag (Bangla)", group_name: "hero" },
+      { key: "hero_badge_en", value: "🌿 100% CERTIFIED PURE & ORGANIC HARVEST", label: "Hero Badge Tag (English)", group_name: "hero" },
+
+      // Promos
+      { key: "promo_topbar_text_bn", value: "🌿 ১৫০০ টাকার কেনাকাটায় সারা বাংলাদেশে ফ্রি হোম ডেলিভারি! প্রোমো কোড: ORGATIVA10", label: "Top Announcement Bar Text (Bangla)", group_name: "promos" },
+      { key: "promo_topbar_text_en", value: "🌿 Free shipping across Bangladesh on orders over ৳1500! Use code: ORGATIVA10", label: "Top Announcement Bar Text (English)", group_name: "promos" },
+
+      // Invoice
+      { key: "invoice_title", value: "Orgativa", label: "Invoice Title / Brand", group_name: "invoice" },
+      { key: "invoice_subtitle", value: "Premium Organic Foods", label: "Invoice Slogan / Subtitle", group_name: "invoice" },
+      { key: "invoice_accent_color", value: "#2D5A27", label: "Invoice Accent Color Hex", group_name: "invoice" },
+      { key: "invoice_logo_url", value: "/assets/orgativa_logo.png", label: "Logo Image URL", group_name: "invoice" },
+      { key: "invoice_address", value: "Banani, Dhaka-1213 | Hotline: +880 1700-000000 | info@orgativa.com", label: "Address & Contact Info", group_name: "invoice" },
+      { key: "invoice_terms", value: "Thank you for choosing Orgativa! Our products are 100% natural and organic. If you wish to request a refund or exchange, please contact us within 7 days with your original invoice.", label: "Terms & Footer Message", group_name: "invoice" },
     ];
 
     const mergedSettings = [...dbSettings];
-    defaultInvoiceFields.forEach((field) => {
+    defaultFields.forEach((field) => {
       if (!mergedSettings.some((s) => s.key === field.key)) {
         mergedSettings.push(field);
       }
@@ -83,19 +113,36 @@ export default function AdminSettings() {
     if (!supabase) return;
     setSaving((prev) => ({ ...prev, [key]: true }));
     const item = settings.find((s) => s.key === key);
+    const val = values[key] ?? "";
+
     const { error } = await supabase.from("site_settings").upsert({
       key,
-      value: values[key] ?? "",
+      value: val,
       label: item?.label || key,
-      group_name: item?.group_name || "invoice",
+      group_name: item?.group_name || "general",
       updated_at: new Date().toISOString()
     });
+
+    // Also sync alias keys to guarantee database consistency for older/seed keys
+    if (key === "contact_phone" || key === "site_phone") {
+      await supabase.from("site_settings").upsert({ key: "contact_phone", value: val, label: "Contact Phone Number / Hotline", group_name: "contact" });
+      await supabase.from("site_settings").upsert({ key: "site_phone", value: val, label: "Site Phone", group_name: "contact" });
+    } else if (key === "contact_email" || key === "site_email") {
+      await supabase.from("site_settings").upsert({ key: "contact_email", value: val, label: "Contact Support Email Address", group_name: "contact" });
+      await supabase.from("site_settings").upsert({ key: "site_email", value: val, label: "Site Email", group_name: "contact" });
+    } else if (key === "delivery_inside_dhaka") {
+      await supabase.from("site_settings").upsert({ key: "delivery_fee", value: val, label: "Delivery Fee", group_name: "delivery" });
+    } else if (key === "delivery_free_threshold") {
+      await supabase.from("site_settings").upsert({ key: "free_delivery_above", value: val, label: "Free Shipping Threshold", group_name: "delivery" });
+    }
+
     setSaving((prev) => ({ ...prev, [key]: false }));
     if (error) {
       console.error("Error saving setting:", error);
-      showToast(t("সেটিং সংরক্ষণ করা যায়নি।", "Could not save setting."));
+      showToast("Could not save setting.");
     } else {
-      showToast(t("সেটিং সফলভাবে সংরক্ষণ করা হয়েছে।", "Setting saved successfully."));
+      showToast("Setting saved successfully.");
+      await refreshSettings();
     }
   }
 
@@ -121,7 +168,7 @@ export default function AdminSettings() {
   };
 
   return (
-    <AdminLayout title={t("প্লাটফর্ম সেটিংস ও কাস্টমাইজেশন", "System Configuration Panels")}>
+    <AdminLayout title="System Configuration Panels">
       {toast && (
         <div style={{ 
           position: "fixed", 
@@ -199,8 +246,18 @@ export default function AdminSettings() {
                         {s.label ?? s.key}
                       </label>
                       
-                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                        {s.key === "invoice_accent_color" ? (
+                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+                        {s.key.includes("logo") || s.key.includes("image") || s.key.includes("url") ? (
+                          <div style={{ flex: 1 }}>
+                            <ImageUploader
+                              value={values[s.key] ?? ""}
+                              onChange={(url) => {
+                                setValues((prev) => ({ ...prev, [s.key]: url }));
+                              }}
+                              folder="settings"
+                            />
+                          </div>
+                        ) : s.key === "invoice_accent_color" ? (
                           <div style={{ display: "flex", gap: 10, flex: 1 }}>
                             <input
                               type="color"
@@ -291,7 +348,7 @@ export default function AdminSettings() {
                           ) : (
                             <Save size={15} />
                           )}
-                          <span>{saving[s.key] ? t("সংরক্ষণ...", "Saving...") : t("সংরক্ষণ", "Save")}</span>
+                          <span>{saving[s.key] ? "Saving..." : "Save"}</span>
                         </button>
                       </div>
                     </div>
@@ -302,7 +359,7 @@ export default function AdminSettings() {
           })
         )}
 
-        {/* Supabase Security Credentials Meta Message */}
+        {/* Database & Security Credentials Meta Message */}
         <div style={{ 
           backgroundColor: "#EFF6FF", 
           borderRadius: 20, 
@@ -328,10 +385,10 @@ export default function AdminSettings() {
           </div>
           <div>
             <h4 style={{ fontSize: 14, fontWeight: 700, color: "#1E40AF", fontFamily: "'Inter',sans-serif", margin: "0 0 6px" }}>
-              {t("অ্যাডমিন ব্যবহারকারী অ্যাকাউন্ট ব্যবস্থাপনা", "System Admin Identity Registry")}
+              System Admin Identity Registry
             </h4>
             <p style={{ fontSize: 13, color: "#1E40AF", fontFamily: "'Inter',sans-serif", lineHeight: 1.6, margin: 0, fontWeight: 500 }}>
-              {t("নতুন অ্যাডমিন ব্যবহারকারী বা মডারেটর যোগ করতে এবং পাসওয়ার্ড পরিবর্তন করতে Supabase Dashboard → Authentication → Users প্যানেল ব্যবহার করুন। নিরাপত্তা প্রটোকল বজায় রাখতে সরাসরি ডাটাবেজে অ্যাক্সেস সীমিত রাখুন।", "To invite new administrators, configure role permissions, or revoke access tokens, navigate directly to your Supabase Auth Identity Hub.")}
+              To invite new administrators, configure role permissions, or revoke access tokens, navigate directly to your secure Cloud Admin Identity & Access console.
             </p>
           </div>
         </div>

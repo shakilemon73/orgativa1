@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { getProductName } from "@/data/products";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -62,13 +63,11 @@ const districtsByDivision: Record<string, { bn: string; en: string }[]> = {
 
 type PayMethod = "bkash" | "nagad" | "rocket" | "cod" | "bank";
 
-const DELIVERY_THRESHOLD = 1000;
-const DELIVERY_CHARGE = 60;
-
 export default function Checkout() {
   const [, navigate] = useLocation();
   const { items, subtotal, clearCart } = useCart();
   const { lang, t, formatPrice, formatNum } = useLanguage();
+  const { getSetting } = useSiteSettings();
 
   const payMethods = [
     { id: "bkash" as PayMethod, label: "bKash", color: "#E2136E", icon: "account_balance_wallet", sub: t("মোবাইল ব্যাংকিং", "Mobile Banking") },
@@ -90,17 +89,22 @@ export default function Checkout() {
   const [placementError, setPlacementError] = useState<string | null>(null);
   const { isMobile } = useResponsive();
 
-  const deliveryFree = subtotal >= DELIVERY_THRESHOLD;
-  const deliveryCharge = deliveryFree ? 0 : DELIVERY_CHARGE;
-  const total = subtotal + deliveryCharge;
-  const px = isMobile ? "16px" : "64px";
-
   const [form, setForm] = useState({
     fullName: "", phone: "", email: "",
     division: "Dhaka", district: "Dhaka",
     thana: "", address: "", postcode: "", notes: "",
   });
   function setF(key: string, val: string) { setForm((prev) => ({ ...prev, [key]: val })); }
+
+  const freeThreshold = Number(getSetting("delivery_free_threshold", "1500")) || 1500;
+  const insideDhakaCharge = Number(getSetting("delivery_inside_dhaka", "60")) || 60;
+  const outsideDhakaCharge = Number(getSetting("delivery_outside_dhaka", "120")) || 120;
+
+  const baseDeliveryCharge = form.division === "Dhaka" ? insideDhakaCharge : outsideDhakaCharge;
+  const deliveryFree = subtotal >= freeThreshold;
+  const deliveryCharge = deliveryFree ? 0 : baseDeliveryCharge;
+  const total = subtotal + deliveryCharge;
+  const px = isMobile ? "16px" : "64px";
 
   async function handlePlaceOrder() {
     try {

@@ -91,17 +91,17 @@ export default function AdminProducts() {
     if (!supabase) return;
     await supabase.from("products").update({ in_stock: !current }).eq("id", id);
     setProducts((prev) => prev.map((p) => p.id === id ? { ...p, in_stock: !current } : p));
-    showToast(!current ? t("পণ্য স্টকে আছে চিহ্নিত করা হয়েছে", "Product marked as In Stock") : t("পণ্য স্টকের বাইরে চিহ্নিত করা হয়েছে", "Product marked as Out of Stock"));
+    showToast(!current ? "Product marked as In Stock" : "Product marked as Out of Stock");
   }
 
   async function deleteProduct(id: string, name: string) {
     if (!supabase) return;
-    if (!confirm(t(`"${name}" মুছে ফেলতে চান? এটি আর ফেরত পাওয়া যাবে না।`, `Are you sure you want to delete "${name}"? This action is permanent.`))) return;
+    if (!confirm(`Are you sure you want to delete "${name}"? This action is permanent.`)) return;
     setDeleting(id);
     await supabase.from("products").delete().eq("id", id);
     setProducts((prev) => prev.filter((p) => p.id !== id));
     setDeleting(null);
-    showToast(t("পণ্য মুছে ফেলা হয়েছে।", "Product successfully deleted."));
+    showToast("Product successfully deleted.");
   }
 
   const filtered = search
@@ -113,7 +113,7 @@ export default function AdminProducts() {
   const totalFeatured = products.filter(p => p.featured).length;
 
   return (
-    <AdminLayout title={t("ইনভেন্টরি পণ্য তালিকা", "Product Inventory Catalog")}>
+    <AdminLayout title="Product Inventory Catalog">
       {/* Premium Elegant Toast Notification */}
       {toast && (
         <div style={{ 
@@ -144,10 +144,10 @@ export default function AdminProducts() {
         {/* KPI OVERVIEW BANNERS */}
         <div className="admin-grid-4" style={{ marginBottom: 28 }}>
           {[
-            { label: t("সর্বমোট পণ্য", "Total Products"), value: formatNum(products.length), icon: Package, color: P, bg: "#F4F7F3", desc: t("সক্রিয় ক্যাটালগ আইটেম", "Active items in store") },
-            { label: t("স্টকে আছে", "Available In Stock"), value: formatNum(totalInStock), icon: CheckCircle2, color: "#059669", bg: "#ECFDF5", desc: t("ডেলিভারিযোগ্য আইটেম", "Ready for shipments") },
-            { label: t("স্টক শেষ", "Out of Stock"), value: formatNum(products.length - totalInStock), icon: XCircle, color: "#DC2626", bg: "#FEF2F2", desc: t("অর্ডার বুকিং বন্ধ", "Disabled currently") },
-            { label: t("প্রিমিয়াম ও ফিচার্ড", "Premium & Featured"), value: formatNum(totalFeatured), icon: Star, color: "#D97706", bg: "#FFFBEB", desc: t("হোমপেজে প্রদর্শিত", "Promoted on homepage") },
+            { label: "Total Products", value: formatNum(products.length), icon: Package, color: P, bg: "#F4F7F3", desc: "Active items in store" },
+            { label: "Available In Stock", value: formatNum(totalInStock), icon: CheckCircle2, color: "#059669", bg: "#ECFDF5", desc: "Ready for shipments" },
+            { label: "Out of Stock", value: formatNum(products.length - totalInStock), icon: XCircle, color: "#DC2626", bg: "#FEF2F2", desc: "Disabled currently" },
+            { label: "Premium & Featured", value: formatNum(totalFeatured), icon: Star, color: "#D97706", bg: "#FFFBEB", desc: "Promoted on homepage" },
           ].map((card, i) => (
             <div key={i} style={{
               backgroundColor: "#fff",
@@ -196,7 +196,7 @@ export default function AdminProducts() {
           justifyContent: "space-between" 
         }}>
           {/* Elegant Search Input */}
-          <div style={{ flex: "1 1 auto", maxWidth: 460, minWidth: 260, position: "relative" }}>
+          <div style={{ flex: "1 1 280px", maxWidth: "100%", position: "relative" }}>
             <div style={{
               display: "flex",
               alignItems: "center",
@@ -211,7 +211,7 @@ export default function AdminProducts() {
               <input
                 value={search} 
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("পণ্যের নাম বা ক্যাটাগরি দিয়ে খুঁজুন...", "Search premium products by name or catalog labels...")}
+                placeholder="Search premium products by name or catalog labels..."
                 style={{ 
                   width: "100%", 
                   border: "none", 
@@ -258,7 +258,7 @@ export default function AdminProducts() {
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = P; e.currentTarget.style.transform = "none"; }}
           >
             <Plus size={16} />
-            {t("নতুন পণ্য যুক্ত করুন", "Add Premium Product")}
+            Add Premium Product
           </button>
         </div>
 
@@ -271,10 +271,10 @@ export default function AdminProducts() {
           boxShadow: "0 4px 24px rgba(0,0,0,0.01)" 
         }}>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
               <thead>
                 <tr style={{ backgroundColor: "#FAFBF9", borderBottom: "1px solid #EEF2ED" }}>
-                  {["", t("পণ্যের নাম ও বিবরণ", "Product Details"), t("ক্যাটাগরি", "Category"), t("মূল্য তালিকা", "Price Grid"), t("স্টক স্ট্যাটাস", "Inventory Status"), t("ফিচার্ড আইটেম", "Featured status"), t("কাজসমূহ", "Actions")].map((h, idx) => (
+                  {["", "Product Details", "Category", "Price Grid", "Inventory Status", "Featured status", "Actions"].map((h, idx) => (
                     <th key={idx} style={{ 
                       padding: "16px 24px", 
                       textAlign: "left", 
@@ -307,10 +307,10 @@ export default function AdminProducts() {
                 ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: 48, textAlign: "center", color: "#6B726A", fontFamily: "'Inter',sans-serif" }}>
-                      {search ? t("কোনো পণ্য পাওয়া যায়নি। অনুগ্রহ করে অন্য কিওয়ার্ড দিয়ে ট্রাই করুন।", "No products matched your search. Try another phrase.") : t("এখনো কোনো পণ্য তালিকাভুক্ত নেই।", "No premium products cataloged yet.")}
+                      {search ? "No products matched your search. Try another phrase." : "No premium products cataloged yet."}
                     </td>
                   </tr>
-                ) : filtered.map((p, i) => {
+                ) : filtered.map((p) => {
                   const match = staticProducts.find((sp) => sp.slug === p.slug || sp.id.toString() === p.id);
                   const displayName = match ? getProductName(match, lang) : p.name;
                   const displayWeight = match ? getProductWeight(match, lang) : p.weight;
@@ -345,7 +345,7 @@ export default function AdminProducts() {
 
                       {/* Name & Weight */}
                       <td style={{ padding: "14px 24px" }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: "#1F2937", fontFamily: "'Inter',sans-serif", margin: "0 0 2px" }}>{displayName}</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "#1F2937", fontFamily: "'Inter',sans-serif", margin: "0 0 2px", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</p>
                         <p style={{ fontSize: 11, color: "#6B726A", fontFamily: "'Inter',sans-serif", margin: 0, fontWeight: 500 }}>{displayWeight}</p>
                       </td>
 
@@ -399,7 +399,7 @@ export default function AdminProducts() {
                             borderRadius: "50%", 
                             backgroundColor: p.in_stock ? "#10B981" : "#EF4444" 
                           }} />
-                          {p.in_stock ? t("স্টকে আছে", "In Stock") : t("স্টক শেষ", "Out of Stock")}
+                          {p.in_stock ? "In Stock" : "Out of Stock"}
                         </button>
                       </td>
 
@@ -409,7 +409,7 @@ export default function AdminProducts() {
                           if (!supabase) return;
                           await supabase.from("products").update({ featured: !p.featured }).eq("id", p.id);
                           setProducts((prev) => prev.map((x) => x.id === p.id ? { ...x, featured: !p.featured } : x));
-                          showToast(!p.featured ? t("পণ্য হোমপেজে প্রমোট করা হয়েছে", "Product featured on homepage") : t("পণ্য ফিচার্ড তালিকা থেকে সরানো হয়েছে", "Product removed from featured lists"));
+                          showToast(!p.featured ? "Product featured on homepage" : "Product removed from featured lists");
                         }}
                           style={{ 
                             display: "inline-flex", 
@@ -430,7 +430,7 @@ export default function AdminProducts() {
                           onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
                         >
                           <Star size={12} fill={p.featured ? "#D97706" : "none"} stroke={p.featured ? "#D97706" : "currentColor"} />
-                          {p.featured ? t("প্রমোটেড", "Featured") : t("সাধারণ", "Standard")}
+                          {p.featured ? "Featured" : "Standard"}
                         </button>
                       </td>
 
@@ -439,7 +439,7 @@ export default function AdminProducts() {
                         <div style={{ display: "flex", gap: 8 }}>
                           {/* Edit Item */}
                           <button onClick={() => navigate(`/admin/products/${p.id}/edit`)}
-                            aria-label={t("পণ্যের বিবরণ সংশোধন", "Edit product details")}
+                            aria-label="Edit product details"
                             style={{ 
                               width: 34, 
                               height: 34, 
@@ -462,7 +462,7 @@ export default function AdminProducts() {
                           {/* Delete Item */}
                           <button onClick={() => deleteProduct(p.id, p.name)}
                             disabled={deleting === p.id}
-                            aria-label={t("পণ্য ক্যাটালগ থেকে বাদ দিন", "Delete product")}
+                            aria-label="Delete product"
                             style={{ 
                               width: 34, 
                               height: 34, 
@@ -501,10 +501,10 @@ export default function AdminProducts() {
               backgroundColor: "#FAFBF9"
             }}>
               <span style={{ fontSize: 12, color: "#6B726A", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-                {t("ক্যাটালগে মোট পণ্য:", "Total items cataloged:")} <strong style={{ color: P, fontSize: 13 }}>{formatNum(filtered.length)}</strong>
+                Total items cataloged: <strong style={{ color: P, fontSize: 13 }}>{formatNum(filtered.length)}</strong>
               </span>
               <span style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "'Inter',sans-serif" }}>
-                {t("অরগ্যাটিভা ইনভেন্টরি ডাটাবেজ", "Orgativa Inventory Database System V2")}
+                Orgativa Inventory Database System V2
               </span>
             </div>
           )}

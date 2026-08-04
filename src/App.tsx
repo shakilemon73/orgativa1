@@ -8,6 +8,7 @@ import OrderTracking from "@/pages/OrderTracking";
 import InvoicePage from "@/pages/InvoicePage";
 import NotFound from "@/pages/not-found";
 import ScrollToTop from "@/components/ScrollToTop";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminProducts from "@/pages/admin/AdminProducts";
@@ -16,6 +17,7 @@ import AdminCategories from "@/pages/admin/AdminCategories";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminOrderDetail from "@/pages/admin/AdminOrderDetail";
 import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminNotifications from "@/pages/admin/AdminNotifications";
 
 function Router() {
   return (
@@ -36,14 +38,15 @@ function Router() {
         <Route path="/admin" component={() => <Redirect to="/admin/dashboard" />} />
         <Route path="/admin/" component={() => <Redirect to="/admin/dashboard" />} />
         <Route path="/admin/login" component={AdminLogin} />
-        <Route path="/admin/dashboard" component={AdminDashboard} />
-        <Route path="/admin/products" component={AdminProducts} />
-        <Route path="/admin/products/new" component={() => <AdminProductForm />} />
-        <Route path="/admin/products/:id/edit" component={AdminProductForm} />
-        <Route path="/admin/categories" component={AdminCategories} />
-        <Route path="/admin/orders" component={AdminOrders} />
-        <Route path="/admin/orders/:id" component={AdminOrderDetail} />
-        <Route path="/admin/settings" component={AdminSettings} />
+        <ProtectedRoute path="/admin/dashboard" component={AdminDashboard} />
+        <ProtectedRoute path="/admin/products" component={AdminProducts} />
+        <ProtectedRoute path="/admin/products/new" component={AdminProductForm} />
+        <ProtectedRoute path="/admin/products/:id/edit" component={AdminProductForm} />
+        <ProtectedRoute path="/admin/categories" component={AdminCategories} />
+        <ProtectedRoute path="/admin/orders" component={AdminOrders} />
+        <ProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
+        <ProtectedRoute path="/admin/settings" component={AdminSettings} />
+        <ProtectedRoute path="/admin/notifications" component={AdminNotifications} />
 
         <Route component={NotFound} />
       </Switch>

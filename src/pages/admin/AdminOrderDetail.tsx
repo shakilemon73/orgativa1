@@ -84,67 +84,100 @@ export default function AdminOrderDetail() {
   const [toast, setToast] = useState<string | null>(null);
 
   const STATUS_LABELS: Record<OrderStatus, { label: string; bg: string; color: string; icon: any }> = {
-    pending:    { label: t("অপেক্ষমাণ", "Pending"),     bg: "#FFFBEB", color: "#B45309", icon: Clock },
-    processing: { label: t("প্রক্রিয়াকরণ", "Processing"),  bg: "#EFF6FF", color: "#1D4ED8", icon: RefreshCw },
-    shipped:    { label: t("শিপ করা হয়েছে", "Shipped"), bg: "#F5F3FF", color: "#6D28D9", icon: Truck },
-    delivered:  { label: t("ডেলিভারি হয়েছে", "Delivered"), bg: "#ECFDF5", color: "#047857", icon: CheckCircle },
-    cancelled:  { label: t("বাতিল", "Cancelled"),           bg: "#FEF2F2", color: "#B91C1C", icon: XCircle },
+    pending:    { label: "Pending",     bg: "#FFFBEB", color: "#B45309", icon: Clock },
+    processing: { label: "Processing",  bg: "#EFF6FF", color: "#1D4ED8", icon: RefreshCw },
+    shipped:    { label: "Shipped", bg: "#F5F3FF", color: "#6D28D9", icon: Truck },
+    delivered:  { label: "Delivered", bg: "#ECFDF5", color: "#047857", icon: CheckCircle },
+    cancelled:  { label: "Cancelled",           bg: "#FEF2F2", color: "#B91C1C", icon: XCircle },
   };
 
   const PAYMENT_LABELS: Record<string, string> = {
     bkash: "bKash Mobile Wallet", 
     nagad: "Nagad Mobile Wallet", 
     rocket: "Rocket Mobile Wallet", 
-    cod: t("ক্যাশ অন ডেলিভারি (COD)", "Cash on Delivery (COD)"), 
-    bank: t("ব্যাংক অ্যাকাউন্ট ট্রান্সফার", "Bank Account Transfer"),
+    cod: "Cash on Delivery (COD)", 
+    bank: "Bank Account Transfer",
   };
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
   useEffect(() => {
-    const applyDemo = () => {
-      const found = demoOrdersList.find(o => o.id === id) ?? demoOrdersList[0];
-      setOrder(found);
-      setItems(demoItems);
-      setLoading(false);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || "");
+
+    const fetchOrderData = () => {
+      const applyDemo = () => {
+        const found = demoOrdersList.find(o => o.id === id) ?? demoOrdersList[0];
+        setOrder(found);
+        setItems(demoItems);
+        setLoading(false);
+      };
+
+      if (!supabase || !isUuid) {
+        applyDemo();
+        return;
+      }
+
+      Promise.all([
+        supabase.from("orders").select("*").eq("id", id).single(),
+        supabase.from("order_items").select("*").eq("order_id", id),
+      ]).then(([orderRes, itemsRes]) => {
+        if (!orderRes.data) {
+          applyDemo();
+        } else {
+          setOrder(orderRes.data);
+          setItems(itemsRes.data ?? []);
+          setLoading(false);
+        }
+      }).catch(() => {
+        applyDemo();
+      });
     };
 
-    if (!supabase) {
-      applyDemo();
-      return;
+    fetchOrderData();
+
+    if (supabase && isUuid) {
+      const channel = supabase
+        .channel(`admin-order-detail-${id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "orders", filter: `id=eq.${id}` },
+          (payload) => {
+            if (payload.new) {
+              setOrder(payload.new as DbOrder);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase!.removeChannel(channel);
+      };
     }
-    Promise.all([
-      supabase.from("orders").select("*").eq("id", id).single(),
-      supabase.from("order_items").select("*").eq("order_id", id),
-    ]).then(([orderRes, itemsRes]) => {
-      if (!orderRes.data) {
-        applyDemo();
-      } else {
-        setOrder(orderRes.data);
-        setItems(itemsRes.data ?? []);
-        setLoading(false);
-      }
-    }).catch(() => {
-      applyDemo();
-    });
   }, [id]);
 
   async function updateStatus(status: OrderStatus) {
-    if (!supabase) return;
     setUpdatingStatus(true);
-    await supabase.from("orders").update({ status }).eq("id", id);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || "");
+    if (supabase && isUuid) {
+      const { error } = await supabase!.from("orders").update({ status }).eq("id", id);
+      if (error) {
+        showToast(`Failed to update status: ${error.message}`);
+        setUpdatingStatus(false);
+        return;
+      }
+    }
     setOrder((prev) => prev ? { ...prev, status } : prev);
-    showToast(`${t("অর্ডারের প্রসেসিং স্ট্যাটাস সফলভাবে পরিবর্তন করা হয়েছে:", "Order status changed successfully:")} ${STATUS_LABELS[status].label}`);
+    showToast(`Order status changed successfully: ${STATUS_LABELS[status].label}`);
     setUpdatingStatus(false);
   }
 
   if (loading) {
     return (
-      <AdminLayout title={t("অর্ডারের বিবরণ লোড হচ্ছে", "Loading Transaction Details")}>
+      <AdminLayout title="Loading Transaction Details">
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 320, gap: 16 }}>
           <Loader2 size={36} className="animate-spin" style={{ color: P }} />
           <span style={{ fontSize: 13, fontWeight: 500, color: "#6B726A" }}>
-            {t("অরগ্যাটিভা পেমেন্ট গেটওয়ে সিঙ্ক হচ্ছে...", "Synchronizing transaction files...")}
+            Synchronizing transaction files...
           </span>
         </div>
       </AdminLayout>
@@ -153,16 +186,16 @@ export default function AdminOrderDetail() {
 
   if (!order) {
     return (
-      <AdminLayout title={t("লেনদেন পাওয়া যায়নি", "Record Not Found")}>
+      <AdminLayout title="Record Not Found">
         <div style={{ textAlign: "center", padding: 64 }}>
           <div style={{ width: 56, height: 56, borderRadius: "50%", backgroundColor: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#DC2626" }}>
             <AlertCircle size={28} />
           </div>
           <p style={{ fontSize: 14, color: "#6B726A", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
-            {t("অনুরোধকৃত অর্ডার নম্বরটি ডাটাবেজে পাওয়া যায়নি।", "This order entry could not be located in the files.")}
+            This order entry could not be located in the files.
           </p>
           <button onClick={() => navigate("/admin/orders")} style={{ marginTop: 20, backgroundColor: P, color: "#fff", border: "none", borderRadius: 12, padding: "12px 28px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(45,90,39,0.15)" }}>
-            {t("অর্ডার তালিকায় ফিরে যান", "Go Back to List")}
+            Go Back to List
           </button>
         </div>
       </AdminLayout>
@@ -173,7 +206,7 @@ export default function AdminOrderDetail() {
   const currentStepIdx = STATUS_FLOW.indexOf(order.status);
 
   return (
-    <AdminLayout title={`${t("অর্ডার রেফারেন্স", "Order ID")} #${order.order_number}`}>
+    <AdminLayout title={`Order ID #${order.order_number}`}>
       {/* Toast Notification */}
       {toast && (
         <div style={{ 
@@ -221,7 +254,7 @@ export default function AdminOrderDetail() {
           onMouseLeave={(e) => { e.currentTarget.style.color = P; }}
         >
           <ArrowLeft size={16} />
-          {t("অর্ডার তালিকায় ফিরে যান", "Back to Orders Registry")}
+          Back to Orders Registry
         </button>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 28 }}>
@@ -252,15 +285,15 @@ export default function AdminOrderDetail() {
                 display: "inline-block",
                 marginBottom: 8
               }}>
-                {t("অর্ডার মেটা ফাইল", "TRANSACTION RECORD")}
+                TRANSACTION RECORD
               </span>
               <h2 style={{ fontSize: 24, fontWeight: 800, color: "#111827", margin: "0 0 6px", fontFamily: "'Inter', sans-serif" }}>
                 #{order.order_number}
               </h2>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#6B726A" }}>
-                <span>{t("প্লেসমেন্ট তারিখ:", "Placed on:")}</span>
+                <span>Placed on:</span>
                 <span style={{ fontWeight: 600, color: "#111827" }}>
-                  {new Date(order.created_at).toLocaleString(lang === "bn" ? "bn-BD" : "en-US", {
+                  {new Date(order.created_at).toLocaleString("en-US", {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
@@ -274,7 +307,7 @@ export default function AdminOrderDetail() {
             <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
               <div style={{ textAlign: "right" }}>
                 <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>
-                  {t("পেমেন্টের মোট মূল্য", "TOTAL AMOUNT")}
+                  TOTAL AMOUNT
                 </span>
                 <span style={{ fontSize: 24, fontWeight: 800, color: P, fontFamily: "'Inter', sans-serif" }}>
                   {formatPrice(order.total)}
@@ -309,10 +342,11 @@ export default function AdminOrderDetail() {
               boxShadow: "0 4px 16px rgba(0,0,0,0.005)"
             }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: "0 0 24px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                🚚 {t("ডেলিভারি স্থিতি পর্যবেক্ষণ", "DISPATCH LIFECYCLE PROGRESS")}
+                🚚 DISPATCH LIFECYCLE PROGRESS
               </h3>
               
-              <div style={{ display: "flex", alignItems: "center", width: "100%", justifyContent: "space-between", position: "relative" }}>
+              <div style={{ overflowX: "auto", paddingBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", width: "100%", justifyContent: "space-between", position: "relative", minWidth: 500 }}>
                 {STATUS_FLOW.map((s, i) => {
                   const done = currentStepIdx >= i;
                   const stepLabel = STATUS_LABELS[s];
@@ -360,6 +394,7 @@ export default function AdminOrderDetail() {
                 })}
               </div>
             </div>
+          </div>
           )}
 
           {/* UPDATE STATUS ACTION BOARD */}
@@ -371,7 +406,7 @@ export default function AdminOrderDetail() {
             boxShadow: "0 4px 16px rgba(0,0,0,0.005)"
           }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: "0 0 16px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              ⚡ {t("অবস্থা পরিবর্তন কর্মসমূহ", "SYSTEM PROGRESS TRIGGERS")}
+              ⚡ SYSTEM PROGRESS TRIGGERS
             </h3>
             
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -407,7 +442,7 @@ export default function AdminOrderDetail() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }} className="admin-grid-2">
+          <div style={{ gap: 28 }} className="admin-grid-2">
             
             {/* Customer Details Block */}
             <div style={{ 
@@ -421,15 +456,15 @@ export default function AdminOrderDetail() {
               gap: 20
             }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                👤 {t("গ্রাহক ও শিপিং বিবরণ", "BUYER & DISPATCH ADRESS")}
+                👤 BUYER & DISPATCH ADDRESS
               </h3>
               
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <InfoBlock icon={User} label={t("গ্রাহকের নাম", "Full Name")} value={order.customer_name} />
-                <InfoBlock icon={Phone} label={t("যোগাযোগের ফোন নম্বর", "Mobile Number")} value={order.phone} />
-                <InfoBlock icon={Mail} label={t("ইমেইল ঠিকানা", "Email Address")} value={order.email} />
-                <InfoBlock icon={MapPin} label={t("শিপিং ঠিকানা", "Delivery Destination Address")} value={`${order.address}, ${order.thana}, ${order.district}, ${order.division} - ${order.postcode || ""}`} />
-                <InfoBlock icon={FileText} label={t("অর্ডার নোট / মন্তব্য", "Order Remarks / Notes")} value={order.notes} color="#B45309" />
+                <InfoBlock icon={User} label="Full Name" value={order.customer_name} />
+                <InfoBlock icon={Phone} label="Mobile Number" value={order.phone} />
+                <InfoBlock icon={Mail} label="Email Address" value={order.email} />
+                <InfoBlock icon={MapPin} label="Delivery Destination Address" value={`${order.address}, ${order.thana}, ${order.district}, ${order.division} - ${order.postcode || ""}`} />
+                <InfoBlock icon={FileText} label="Order Remarks / Notes" value={order.notes} color="#B45309" />
               </div>
             </div>
 
@@ -445,30 +480,30 @@ export default function AdminOrderDetail() {
               gap: 20
             }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                💳 {t("লেনদেন ও রাজস্ব হিসাব", "PAYMENT & LEDGER RECORDS")}
+                💳 PAYMENT & LEDGER RECORDS
               </h3>
               
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <InfoBlock icon={CreditCard} label={t("পেমেন্ট মাধ্যম", "Gateway Protocol")} value={PAYMENT_LABELS[order.payment_method] ?? order.payment_method} />
-                  <InfoBlock icon={Phone} label={t("যে নম্বর থেকে পেমেন্ট করা হয়েছে", "Sender Account Number")} value={order.payment_number} />
-                  <InfoBlock icon={ShieldCheck} label={t("ট্রানজেকশন আইডি", "Transaction Verification ID")} value={order.transaction_id} color="#059669" />
+                  <InfoBlock icon={CreditCard} label="Gateway Protocol" value={PAYMENT_LABELS[order.payment_method] ?? order.payment_method} />
+                  <InfoBlock icon={Phone} label="Sender Account Number" value={order.payment_number} />
+                  <InfoBlock icon={ShieldCheck} label="Transaction Verification ID" value={order.transaction_id} color="#059669" />
                 </div>
 
                 <div style={{ borderTop: "1px solid #EEF2ED", paddingTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 12, color: "#6B726A", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>{t("পণ্যের মূল্য", "Subtotal")}</span>
+                    <span style={{ fontSize: 12, color: "#6B726A", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>Subtotal</span>
                     <span style={{ fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", color: "#111827" }}>{formatPrice(order.subtotal)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 12, color: "#6B726A", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>{t("ডেলিভারি ফি", "Shipping & Dispatch")}</span>
+                    <span style={{ fontSize: 12, color: "#6B726A", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>Shipping & Dispatch</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: order.delivery_fee === 0 ? P : "#111827", fontFamily: "'Inter',sans-serif" }}>
-                      {order.delivery_fee === 0 ? t("ফ্রি ডেলিভারি", "Free Shipping") : formatPrice(order.delivery_fee)}
+                      {order.delivery_fee === 0 ? "Free Shipping" : formatPrice(order.delivery_fee)}
                     </span>
                   </div>
                   
                   <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1.5px dashed #E5EFE2", paddingTop: 12, marginTop: 4 }}>
-                    <span style={{ fontSize: 14, color: "#111827", fontWeight: 700 }}>{t("সর্বমোট বিল", "Grand Ledger Total")}</span>
+                    <span style={{ fontSize: 14, color: "#111827", fontWeight: 700 }}>Grand Ledger Total</span>
                     <span style={{ fontSize: 18, fontWeight: 800, color: P, fontFamily: "'Inter',sans-serif" }}>{formatPrice(order.total)}</span>
                   </div>
                 </div>
@@ -488,7 +523,7 @@ export default function AdminOrderDetail() {
             <div style={{ padding: "22px 32px", borderBottom: "1px solid #EEF2ED", display: "flex", alignItems: "center", gap: 8 }}>
               <ShoppingBag size={18} style={{ color: P }} />
               <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                📦 {t("অর্ডারকৃত পণ্য তালিকা", "PACKAGED ITEM LINE DETAILS")} ({formatNum(items.length)} {t("টি আইটেম", "lines")})
+                📦 PACKAGED ITEM LINE DETAILS ({formatNum(items.length)} lines)
               </h3>
             </div>
             
@@ -525,7 +560,7 @@ export default function AdminOrderDetail() {
                         {displayName}
                       </p>
                       <p style={{ fontSize: 11, color: "#6B726A", fontFamily: "'Inter',sans-serif", margin: 0, fontWeight: 500 }}>
-                        {formatPrice(item.unit_price)} x {formatNum(item.quantity)} {t("পরিমাণ", "units")}
+                        {formatPrice(item.unit_price)} x {formatNum(item.quantity)} units
                       </p>
                     </div>
                     
