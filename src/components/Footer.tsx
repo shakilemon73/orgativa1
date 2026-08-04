@@ -19,15 +19,74 @@ import {
   ChevronRight 
 } from "lucide-react";
 
+// Real high-fidelity brand SVGs for payments and app stores
+const BkashIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <rect width="32" height="32" rx="6" fill="#E2136E" />
+    <path d="M16 6L24 14L16 22L8 14L16 6Z" fill="white" />
+    <path d="M16 11L20 15L16 19L12 15L16 11Z" fill="#E2136E" />
+    <circle cx="16" cy="15" r="1.5" fill="white" />
+  </svg>
+);
+
+const NagadIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <rect width="32" height="32" rx="6" fill="#F47920" />
+    <path d="M10 21V11H13L17.5 17.5V11H20.5V21H17.5L13 14.5V21H10Z" fill="white" />
+    <path d="M15 8C16 8 17 9 17 10C17 11 16 12 15 12C14 12 13 11 13 10C13 9 14 8 15 8Z" fill="#FFF" />
+  </svg>
+);
+
+const RocketIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <rect width="32" height="32" rx="6" fill="#8B1A8B" />
+    <path d="M16 7C16 7 13 11 13 15C13 17.5 14.5 19 16 22C17.5 19 19 17.5 19 15C19 11 16 7 16 7Z" fill="white" />
+    <path d="M13 17.5C12.5 17.5 12 18 12 18.5C12 19 13 20.5 14.5 21C14 20 13.5 18.5 13 17.5Z" fill="white" opacity="0.8" />
+    <path d="M19 17.5C19.5 17.5 20 18 20 18.5C20 19 19 20.5 17.5 21C18 20 18.5 18.5 19 17.5Z" fill="white" opacity="0.8" />
+    <circle cx="16" cy="13" r="1.5" fill="#8B1A8B" />
+  </svg>
+);
+
+const CodIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <rect width="32" height="32" rx="6" fill="#2D5A27" />
+    <rect x="8" y="11" width="16" height="10" rx="1.5" stroke="white" strokeWidth="1.5" fill="none" />
+    <circle cx="16" cy="16" r="2" stroke="white" strokeWidth="1.5" fill="none" />
+    <path d="M11 16H12M20 16H21" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
+const BankIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <rect width="32" height="32" rx="6" fill="#1A56DB" />
+    <path d="M8 22H24M10 13V19M14 13V19M18 13V19M22 13V19M16 8L8 12V13H24V12L16 8Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  </svg>
+);
+
+const AppleStoreIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }} className="text-white">
+    <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-.53-.25-1.07-.34-1.61-.34-.54 0-1.05.1-1.58.35-1.02.48-1.95.42-2.88-.41-4.04-3.95-3.37-10.45.98-10.53 1.22.02 2 .54 2.65.54s1.3-.49 2.5-.42c1.55.08 2.7.67 3.37 1.62-3.15 1.87-2.65 6.02.47 7.28-.62 1.55-1.42 3.1-2.22 4.15zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.2 2.5-2.12 4.45-3.74 4.25z" />
+  </svg>
+);
+
+const PlayStoreIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+    <path d="M3.25 2.15C3.08 2.33 3 2.62 3 3V21C3 21.38 3.08 21.67 3.25 21.85L3.35 21.95L13.15 12.15V11.85L3.35 2.05L3.25 2.15Z" fill="#00F0FF" />
+    <path d="M13.15 11.85L3.35 2.05C3.68 1.96 4.12 2.03 4.6 2.31L16.35 8.95L13.15 11.85Z" fill="#FFC700" />
+    <path d="M13.15 12.15L16.35 8.95L20.45 11.25C21.1 11.62 21.1 12.38 20.45 12.75L16.35 15.05L13.15 12.15Z" fill="#FF007A" />
+    <path d="M13.15 12.15L3.35 21.95C3.68 22.04 4.12 21.97 4.6 21.69L16.35 15.05L13.15 12.15Z" fill="#00E676" />
+  </svg>
+);
+
 const P = "#2D5A27";
 const BG = "#0D1F0B";
 
 const payments = [
-  { name: "bKash", color: "#E2136E" },
-  { name: "Nagad", color: "#F47920" },
-  { name: "Rocket", color: "#8B1A8B" },
-  { name: "COD", color: "#2D5A27" },
-  { name: "Bank", color: "#1A56DB" },
+  { name: "bKash", color: "#E2136E", icon: BkashIcon },
+  { name: "Nagad", color: "#F47920", icon: NagadIcon },
+  { name: "Rocket", color: "#8B1A8B", icon: RocketIcon },
+  { name: "COD", color: "#2D5A27", icon: CodIcon },
+  { name: "Bank", color: "#1A56DB", icon: BankIcon },
 ];
 
 export default function Footer() {
@@ -206,10 +265,16 @@ export default function Footer() {
                 <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, fontFamily: "'Inter',sans-serif", margin: "0 0 4px" }}>
                   {t("অ্যাপ ডাউনলোড", "DOWNLOAD APP")}
                 </p>
-                {[{ label: t("অ্যাপ স্টোর", "App Store"), icon: Smartphone }, { label: t("গুগল প্লে", "Google Play"), icon: Play }].map(({ label, icon: Icon }) => (
-                  <button key={label} style={{ display: "flex", alignItems: "center", gap: 10, backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "8px 14px", cursor: "pointer", width: "100%" }}>
-                    <Icon size={16} className="text-white/50" />
-                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>{label}</span>
+                {[
+                  { label: t("অ্যাপ স্টোর", "App Store"), subtitle: t("ডাউনলোড করুন", "Download on"), icon: AppleStoreIcon },
+                  { label: t("গুগল প্লে", "Google Play"), subtitle: t("গেট ইট অন", "GET IT ON"), icon: PlayStoreIcon }
+                ].map(({ label, subtitle, icon: Icon }) => (
+                  <button key={label} style={{ display: "flex", alignItems: "center", gap: 10, backgroundColor: "#000", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", width: "100%", textAlign: "left" }}>
+                    <Icon size={20} />
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <span style={{ fontSize: 8, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", fontFamily: "'Inter',sans-serif", letterSpacing: "0.05em", lineHeight: 1 }}>{subtitle}</span>
+                      <span style={{ fontSize: 13, color: "#fff", fontFamily: "'Inter',sans-serif", fontWeight: 700, lineHeight: 1.2 }}>{label}</span>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -229,13 +294,19 @@ export default function Footer() {
               <a key={itemText} href="#" style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", fontFamily: "'Inter',sans-serif", textDecoration: "none" }}>{itemText}</a>
             ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: "'Inter',sans-serif", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", marginRight: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "'Inter',sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginRight: 4 }}>
               {t("আমরা গ্রহণ করি", "WE ACCEPT")}
             </span>
-            {payments.map((p) => (
-              <span key={p.name} style={{ fontSize: 10, fontWeight: 800, color: p.color, backgroundColor: "rgba(255,255,255,0.06)", border: `1px solid ${p.color}40`, borderRadius: 5, padding: "3px 8px", fontFamily: "'Inter',sans-serif" }}>{p.name}</span>
-            ))}
+            {payments.map((p) => {
+              const Icon = p.icon;
+              return (
+                <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "4px 8px", userSelect: "none" }}>
+                  <Icon size={14} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.75)", fontFamily: "'Inter',sans-serif" }}>{p.name}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
