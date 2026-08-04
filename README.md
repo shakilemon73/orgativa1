@@ -19,3 +19,29 @@ To set up your database in Supabase:
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
 5. You can also sync demo products, categories, settings, and orders directly from the **Admin Dashboard** or **Admin Settings** page in the web app.
+
+## Cloudflare Workers Deployment (Workers Assets)
+
+This application is ready to be deployed as a Single Page Application (SPA) to Cloudflare Workers using the modern **Workers Assets** system.
+
+### Prerequisites
+1. Ensure you have a Cloudflare account.
+2. Install the Cloudflare Wrangler CLI globally (optional, as it's already installed in development dependencies):
+   ```bash
+   npm install -g wrangler
+   ```
+
+### Deployment Steps
+1. **Login to Cloudflare**:
+   ```bash
+   npx wrangler login
+   ```
+2. **Configure Environment Variables**:
+   Vite loads environment variables at build-time. Make sure your `.env` contains the correct Supabase production keys before compiling.
+3. **Deploy with a single command**:
+   ```bash
+   npm run deploy
+   ```
+
+This command automatically builds the static assets of the Vite React SPA inside `./dist` and uploads them to the Cloudflare network. The configured `wrangler.toml` handles routing fallbacks seamlessly, redirecting deep links to `index.html` for client-side routing.
+
