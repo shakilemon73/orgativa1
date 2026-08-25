@@ -4,6 +4,7 @@ import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useCategories } from "@/lib/supabase-hooks";
 import Logo from "@/components/Logo";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -52,6 +53,7 @@ export default function Header() {
   const { totalItems } = useCart();
   const { lang, setLang, t, formatNum } = useLanguage();
   const { settings, getSetting } = useSiteSettings();
+  const { data: dynamicCategories } = useCategories();
   const [, navigate] = useLocation();
   const [location] = useLocation();
   const [searchFocused, setSearchFocused] = useState(false);
@@ -60,6 +62,16 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isMobile, isTablet, isDesktop, width } = useResponsive();
   const useCompactHeader = width < 1024;
+
+  const activeCategories = dynamicCategories && dynamicCategories.length > 0
+    ? dynamicCategories.map(c => ({
+        slug: c.slug,
+        labelBn: c.label,
+        labelEn: c.labelEn || c.label,
+        icon: c.icon || "FolderTree",
+        image: c.image
+      }))
+    : navLinks;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 15);
@@ -650,7 +662,7 @@ export default function Header() {
                   </a>
                 </li>
 
-                {navLinks.map((link) => {
+                {activeCategories.map((link) => {
                   const active = location === `/category/${link.slug}`;
                   const label = lang === "en" ? link.labelEn : link.labelBn;
                   return (
@@ -676,7 +688,7 @@ export default function Header() {
                         onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = P; }}
                         onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "#3E4A3B"; }}
                       >
-                        <link.icon size={18} color={active ? P : "#7C9079"} />
+                        <CategoryIcon slug={link.slug} size={18} color={active ? P : "#7C9079"} />
                         <span>{label}</span>
                       </a>
                     </li>
@@ -827,7 +839,7 @@ export default function Header() {
                     <ChevronRight size={15} style={{ opacity: 0.5, color: location === "/category/all" ? P : "#8BA088" }} />
                   </button>
 
-                  {navLinks.map((link) => {
+                  {activeCategories.map((link) => {
                     const active = location === `/category/${link.slug}`;
                     const label = lang === "en" ? link.labelEn : link.labelBn;
                     return (
@@ -861,7 +873,7 @@ export default function Header() {
                             justifyContent: "center",
                             flexShrink: 0
                           }}>
-                            <link.icon size={16} color={active ? "#fff" : P} />
+                            <CategoryIcon slug={link.slug} size={16} color={active ? "#fff" : P} />
                           </div>
                           <span style={{ fontSize: 14, fontWeight: active ? 700 : 600, fontFamily: "'Inter', sans-serif" }}>{label}</span>
                         </div>

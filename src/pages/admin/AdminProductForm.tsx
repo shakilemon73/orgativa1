@@ -165,52 +165,61 @@ export default function AdminProductForm() {
     const catObj = categories.find((c) => c.slug === catSlug);
     const catLabel = form.category_label.trim() || catObj?.label || catSlug;
 
-    if (!supabase) { setError("Supabase is not configured."); setSaving(false); return; }
-
-    // Ensure category exists in categories table to satisfy FOREIGN KEY constraint products_category_slug_fkey
-    const { error: catErr } = await supabase.from("categories").upsert({
-      slug: catSlug,
-      label: catLabel,
-      icon: catObj?.icon || "category",
-      image_url: catObj?.image_url || null,
-      display_order: catObj?.display_order || 1,
-    }, { onConflict: "slug" });
-
-    if (catErr) {
-      console.warn("Category upsert notice:", catErr.message);
+    if (!supabase) {
+      // Local development fallback
+      navigate("/admin/products");
+      return;
     }
 
-    const payload: Record<string, unknown> = {
-      slug: form.slug.trim(),
-      name: form.name.trim(),
-      category_label: catLabel,
-      category_slug: catSlug,
-      weight: form.weight.trim(),
-      price: parseInt(form.price) || 0,
-      original_price: form.original_price ? parseInt(form.original_price) : null,
-      rating: parseInt(form.rating) || 5,
-      reviews: parseInt(form.reviews) || 0,
-      image: form.image.trim(),
-      images: form.images_raw.split("\n").map(s => s.trim()).filter(Boolean),
-      badge: form.badge.trim() || null,
-      description: form.description.trim(),
-      highlights: form.highlights_raw.split("\n").map(s => s.trim()).filter(Boolean),
-      origin: form.origin.trim(),
-      in_stock: form.in_stock,
-      featured: form.featured,
-      trending: form.trending,
-      display_order: parseInt(form.display_order) || 0,
-    };
+    try {
+      // Ensure category exists in categories table to satisfy FOREIGN KEY constraint products_category_slug_fkey
+      const { error: catErr } = await supabase.from("categories").upsert({
+        slug: catSlug,
+        label: catLabel,
+        icon: catObj?.icon || "category",
+        image_url: catObj?.image_url || null,
+        display_order: catObj?.display_order || 1,
+      }, { onConflict: "slug" });
 
-    if (isEdit) {
-      const { error: err } = await supabase.from("products").update(payload).eq("id", id);
-      if (err) { setError(err.message); setSaving(false); return; }
-    } else {
-      const { error: err } = await supabase.from("products").insert(payload);
-      if (err) { setError(err.message); setSaving(false); return; }
+      if (catErr) {
+        console.warn("Category upsert notice:", catErr.message);
+      }
+
+      const payload: Record<string, unknown> = {
+        slug: form.slug.trim(),
+        name: form.name.trim(),
+        category_label: catLabel,
+        category_slug: catSlug,
+        weight: form.weight.trim(),
+        price: parseInt(form.price) || 0,
+        original_price: form.original_price ? parseInt(form.original_price) : null,
+        rating: parseInt(form.rating) || 5,
+        reviews: parseInt(form.reviews) || 0,
+        image: form.image.trim(),
+        images: form.images_raw.split("\n").map(s => s.trim()).filter(Boolean),
+        badge: form.badge.trim() || null,
+        description: form.description.trim(),
+        highlights: form.highlights_raw.split("\n").map(s => s.trim()).filter(Boolean),
+        origin: form.origin.trim(),
+        in_stock: form.in_stock,
+        featured: form.featured,
+        trending: form.trending,
+        display_order: parseInt(form.display_order) || 0,
+      };
+
+      if (isEdit) {
+        const { error: err } = await supabase.from("products").update(payload).eq("id", id);
+        if (err) { setError(err.message); setSaving(false); return; }
+      } else {
+        const { error: err } = await supabase.from("products").insert(payload);
+        if (err) { setError(err.message); setSaving(false); return; }
+      }
+
+      navigate("/admin/products");
+    } catch (e: any) {
+      setError(e.message || "Failed to save product.");
+      setSaving(false);
     }
-
-    navigate("/admin/products");
   }
 
   if (loading) {

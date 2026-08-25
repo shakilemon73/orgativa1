@@ -82,9 +82,6 @@ export default function AdminDashboard() {
     }
 
     try {
-      // Ensure DB has seed data if empty
-      await seedSupabaseData(false);
-
       // Fetch Products, Orders, and Categories in parallel
       const [prodRes, ordRes, catRes] = await Promise.all([
         supabase.from("products").select("*").order("created_at", { ascending: false }),
@@ -98,10 +95,10 @@ export default function AdminDashboard() {
         setProductsList(staticProducts);
       }
 
-      if (ordRes.data && ordRes.data.length > 0) {
+      if (ordRes.data) {
         setOrdersList(ordRes.data);
       } else {
-        setOrdersList(demoOrdersList);
+        setOrdersList([]);
       }
 
       if (catRes.data && catRes.data.length > 0) {
@@ -112,7 +109,7 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error("Dashboard fetch error:", err);
       setProductsList(staticProducts);
-      setOrdersList(demoOrdersList);
+      setOrdersList([]);
       setCategoriesList(staticCategories);
     } finally {
       setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
@@ -215,18 +212,42 @@ export default function AdminDashboard() {
       }
       return monthlyBuckets.slice(0, 8);
     } else if (revenuePeriod === "Quarterly") {
-      return [
-        { month: "Q1 (Jan-Mar)", oneTime: 74000, recurring: 128000 },
-        { month: "Q2 (Apr-Jun)", oneTime: 109000, recurring: 168000 },
-        { month: "Q3 (Jul-Sep)", oneTime: 87000, recurring: 122000 },
-        { month: "Q4 (Oct-Dec)", oneTime: 95000, recurring: 145000 },
+      const quarters = [
+        { month: "Q1 (Jan-Mar)", oneTime: 0, recurring: 0 },
+        { month: "Q2 (Apr-Jun)", oneTime: 0, recurring: 0 },
+        { month: "Q3 (Jul-Sep)", oneTime: 0, recurring: 0 },
+        { month: "Q4 (Oct-Dec)", oneTime: 0, recurring: 0 },
       ];
+      ordersList.forEach(o => {
+        const date = new Date(o.created_at || Date.now());
+        const qIdx = Math.min(3, Math.floor(date.getMonth() / 3));
+        const amt = Number(o.total) || 0;
+        if (o.payment_method === "bkash" || o.payment_method === "nagad") {
+          quarters[qIdx].oneTime += amt;
+        } else {
+          quarters[qIdx].recurring += amt;
+        }
+      });
+      return quarters;
     } else {
-      return [
-        { month: "2023", oneTime: 320000, recurring: 580000 },
-        { month: "2024", oneTime: 480000, recurring: 820000 },
-        { month: "2025", oneTime: 620000, recurring: 980000 },
+      const currentYear = new Date().getFullYear();
+      const years = [
+        { month: String(currentYear - 2), oneTime: 0, recurring: 0 },
+        { month: String(currentYear - 1), oneTime: 0, recurring: 0 },
+        { month: String(currentYear), oneTime: 0, recurring: 0 },
       ];
+      ordersList.forEach(o => {
+        const date = new Date(o.created_at || Date.now());
+        const y = date.getFullYear();
+        const amt = Number(o.total) || 0;
+        const target = years.find(item => item.month === String(y)) || years[2];
+        if (o.payment_method === "bkash" || o.payment_method === "nagad") {
+          target.oneTime += amt;
+        } else {
+          target.recurring += amt;
+        }
+      });
+      return years;
     }
   }, [ordersList, revenuePeriod]);
 
@@ -245,15 +266,15 @@ export default function AdminDashboard() {
     const totalCount = productsList.length || 1;
 
     return categoriesList.slice(0, 4).map((cat, idx) => {
-      const catProds = productsList.filter(p => p.category_slug === cat.slug || p.category_label === cat.label);
-      const count = catProds.length || Math.floor(Math.random() * 5) + 2;
+      const catProds = productsList.filter(p => p.category_slug === cat.slug || p.category_label === cat.label || p.category === cat.label);
+      const count = catProds.length;
       const pct = Math.round((count / totalCount) * 100);
-      const estimatedValue = count * 12500;
+      const categoryTotalValue = catProds.reduce((sum, p) => sum + (Number(p.price) || 0), 0);
 
       return {
         name: cat.label || cat.name || "Category",
-        value: estimatedValue,
-        percentage: `${pct > 0 ? pct : 15}%`,
+        value: categoryTotalValue || (count * 1000),
+        percentage: `${pct}%`,
         color: palette[idx % palette.length]
       };
     });

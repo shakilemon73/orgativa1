@@ -120,28 +120,23 @@ export default function AdminOrders() {
     }
 
     try {
-      // 1. First check count, auto-seed if empty
-      const { count } = await supabase.from("orders").select("*", { count: "exact", head: true });
-      if (count === 0 || count === null) {
-        await seedSupabaseData(false);
-      }
-
-      // 2. Fetch real Supabase orders
+      // Fetch real Supabase orders
       const { data, error } = await supabase
         .from("orders")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error || !data || data.length === 0) {
-        console.warn("Supabase orders query returned no rows or error:", error);
-        setRawOrders(demoOrdersList);
+      if (error) {
+        console.warn("Supabase orders query returned error:", error);
+        setRawOrders([]);
       } else {
-        setRawOrders(data);
+        // If supabase returned rows (even empty array []), reflect exact DB state!
+        setRawOrders(data || []);
         setRealtimeActive(true);
       }
     } catch (err) {
       console.error("Error loading orders from Supabase:", err);
-      setRawOrders(demoOrdersList);
+      setRawOrders([]);
     } finally {
       setLastSyncedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       setLoading(false);
@@ -976,11 +971,14 @@ export default function AdminOrders() {
                               color: "#DC2626",
                               border: "1px solid #FECACA", 
                               borderRadius: 8,
-                              padding: "6px 8px",
+                              padding: "6px 10px",
                               cursor: "pointer", 
                               display: "inline-flex", 
                               alignItems: "center", 
-                              justifyContent: "center",
+                              gap: 4,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              fontFamily: "'Inter',sans-serif",
                               transition: "all 0.15s" 
                             }}
                             onMouseEnter={(e) => {
@@ -991,6 +989,7 @@ export default function AdminOrders() {
                             }}
                           >
                             <Trash2 size={13} />
+                            <span>Delete</span>
                           </button>
                         </div>
                       </td>

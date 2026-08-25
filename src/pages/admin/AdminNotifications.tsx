@@ -31,7 +31,7 @@ const P = "#2D5A27";
 
 export default function AdminNotifications() {
   const [, navigate] = useLocation();
-  const { formatPrice } = useLanguage();
+  const { formatPrice, formatNum } = useLanguage();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
@@ -43,29 +43,54 @@ export default function AdminNotifications() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  async function loadAlerts() {
-    setLoading(true);
+  async function loadAlerts(isSilent = false) {
+    if (!isSilent) setLoading(true);
     const list: NotificationItem[] = [];
 
     try {
       if (supabase) {
-        // 1. Fetch pending orders
-        const { data: pendingOrders } = await supabase
+        // 1. Fetch recent orders
+        const { data: allOrders } = await supabase
           .from("orders")
-          .select("id, order_number, customer_name, total, created_at")
-          .eq("status", "pending")
-          .order("created_at", { ascending: false });
+          .select("id, order_number, customer_name, total, status, created_at, payment_method")
+          .order("created_at", { ascending: false })
+          .limit(20);
 
-        if (pendingOrders) {
-          pendingOrders.forEach((ord) => {
+        if (allOrders && allOrders.length > 0) {
+          allOrders.forEach((ord) => {
+            const dateObj = new Date(ord.created_at);
+            const timeStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+            const notifId = `order-${ord.status}-${ord.id}`;
+            const isRead = localStorage.getItem(`read_notif_${ord.id}`) === "true";
+
+            let title = `Order #${ord.order_number}`;
+            let description = `Customer ${ord.customer_name} placed an order of ${formatPrice(ord.total)} via ${(ord.payment_method || 'payment').toUpperCase()}.`;
+
+            if (ord.status === "pending") {
+              title = `⚡ New Pending Order #${ord.order_number}`;
+              description = `Customer ${ord.customer_name} placed an order of ${formatPrice(ord.total)}. Awaiting verification.`;
+            } else if (ord.status === "processing") {
+              title = `📦 Order #${ord.order_number} In Processing`;
+              description = `Order for ${ord.customer_name} (${formatPrice(ord.total)}) is currently being packaged.`;
+            } else if (ord.status === "shipped") {
+              title = `🚚 Order #${ord.order_number} Shipped`;
+              description = `Order for ${ord.customer_name} has been dispatched for delivery.`;
+            } else if (ord.status === "delivered") {
+              title = `✅ Order #${ord.order_number} Delivered`;
+              description = `Order for ${ord.customer_name} was successfully delivered.`;
+            } else if (ord.status === "cancelled") {
+              title = `❌ Order #${ord.order_number} Cancelled`;
+              description = `Order for ${ord.customer_name} was marked as cancelled.`;
+            }
+
             list.push({
-              id: `order-pending-${ord.id}`,
+              id: notifId,
               type: "order",
-              title: `New Pending Order #${ord.order_number}`,
-              description: `Buyer ${ord.customer_name} placed an order of ${formatPrice(ord.total)}. Needs manual review & verification.`,
-              time: new Date(ord.created_at).toLocaleString(),
-              timestamp: new Date(ord.created_at).getTime(),
-              read: localStorage.getItem(`read_notif_${ord.id}`) === "true",
+              title,
+              description,
+              time: timeStr,
+              timestamp: dateObj.getTime(),
+              read: isRead,
               link: `/admin/orders/${ord.id}`
             });
           });
@@ -74,58 +99,78 @@ export default function AdminNotifications() {
         // 2. Fetch out-of-stock products
         const { data: oosProducts } = await supabase
           .from("products")
-          .select("id, name, price")
+          .select("id, name, price, created_at")
           .eq("in_stock", false);
 
-        if (oosProducts) {
+        if (oosProducts && oosProducts.length > 0) {
           oosProducts.forEach((prod) => {
+            const notifId = `stock-oos-${prod.id}`;
             list.push({
-              id: `stock-oos-${prod.id}`,
+              id: notifId,
               type: "stock",
-              title: "Product Out of Stock!",
-              description: `"${prod.name}" (${formatPrice(prod.price)}) has been marked as out of stock. Stock replenishment recommended.`,
-              time: "Replenish Urgent",
-              timestamp: Date.now() - 3600000, // mock offset
+              title: "⚠️ Product Out of Stock!",
+              description: `"${prod.name}" (${formatPrice(prod.price)}) is marked out of stock. Stock replenishment recommended.`,
+              time: "Attention Needed",
+              timestamp: Date.now() - 1000,
               read: localStorage.getItem(`read_notif_${prod.id}`) === "true",
               link: `/admin/products`
             });
           });
         }
+
+        // 3. Dynamic system metrics
+        const { count: prodCount } = await supabase.from("products").select("*", { count: "exact", head: true });
+        const { count: orderCount } = await supabase.from("orders").select("*", { count: "exact", head: true });
+
+        list.push({
+          id: "sys-realtime-live",
+          type: "system",
+          title: "🟢 Realtime Sync Active",
+          description: `Postgres Sockets connected. Currently managing ${formatNum(prodCount || 0)} products and ${formatNum(orderCount || 0)} customer orders in real-time.`,
+          time: "Live Socket",
+          timestamp: Date.now(),
+          read: localStorage.getItem("read_notif_sys-realtime-live") === "true"
+        });
       }
-
-      // Add standard system logs
-      list.push({
-        id: "sys-ready",
-        type: "system",
-        title: "Secure SSL Gateway Ready",
-        description: "Payment gateway validation triggers are actively operating. standard bKash/Nagad/Rocket sandboxes verified.",
-        time: "Just Now",
-        timestamp: Date.now(),
-        read: localStorage.getItem("read_notif_sys-ready") === "true"
-      });
-
-      list.push({
-        id: "sys-realtime",
-        type: "system",
-        title: "Realtime Sync Subscribed",
-        description: "Client transactions, catalog updates, and inventory changes are active via secure postgres sockets.",
-        time: "1 hour ago",
-        timestamp: Date.now() - 3600000,
-        read: localStorage.getItem("read_notif_sys-realtime") === "true"
-      });
-
+    } catch (err) {
+      console.error("Error loading alerts:", err);
+    } finally {
       // Sort by timestamp desc
       list.sort((a, b) => b.timestamp - a.timestamp);
       setNotifications(list);
-    } catch (err) {
-      console.error(err);
-    } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
     loadAlerts();
+
+    if (!supabase) return;
+
+    // Real-time Postgres Listener for immediate notification updates
+    const channel = supabase
+      .channel("admin-notifications-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => {
+          loadAlerts(true);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => {
+          loadAlerts(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (supabase) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, []);
 
   function handleMarkRead(id: string, realId?: string) {
@@ -217,7 +262,7 @@ export default function AdminNotifications() {
 
           <div style={{ display: "flex", gap: 8 }}>
             <button 
-              onClick={loadAlerts}
+              onClick={() => loadAlerts()}
               style={{
                 display: "inline-flex",
                 alignItems: "center",

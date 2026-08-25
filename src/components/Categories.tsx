@@ -121,7 +121,7 @@ function CategoryFeatureCard({ cat, onClick, compact, lang, formatNum }: { cat: 
           </div>
         )}
         <div style={{ position: "absolute", top: 8, right: 8, backgroundColor: P, color: "#fff", borderRadius: 6, padding: "2px 7px", fontSize: 9, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
-          {formatNum(cat.count || 0)}+
+          {formatNum(cat.count || 0)} {lang === "en" ? (cat.count === 1 ? "Item" : "Items") : "টি পণ্য"}
         </div>
       </div>
       <div style={{ padding: compact ? "10px 12px" : "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

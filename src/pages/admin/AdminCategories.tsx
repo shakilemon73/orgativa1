@@ -40,9 +40,9 @@ const inStyle: React.CSSProperties = {
 
 const EMPTY = { slug: "", label: "", icon: "FolderTree", image_url: "", product_count: "0", display_order: "0" };
 
-import { categories as staticCategories } from "@/data/products";
+import { categories as staticCategories, products as staticProducts } from "@/data/products";
 
-function categoryToDbCategory(c: typeof staticCategories[0], index: number): DbCategory {
+function categoryToDbCategory(c: typeof staticCategories[0], index: number = 0): DbCategory {
   return {
     id: (index + 1).toString(),
     slug: c.slug,
@@ -71,7 +71,10 @@ export default function AdminCategories() {
   }
 
   async function load() {
-    const staticDbCategories = staticCategories.map(categoryToDbCategory);
+    const staticDbCategories = staticCategories.map(c => ({
+      ...categoryToDbCategory(c),
+      product_count: staticProducts.filter(p => p.categorySlug === c.slug || p.category === c.label).length
+    }));
     if (!supabase) {
       setCategories(staticDbCategories);
       setLoading(false);
@@ -79,11 +82,24 @@ export default function AdminCategories() {
     }
     setLoading(true);
     try {
-      const { data } = await supabase.from("categories").select("*").order("display_order");
+      const [catRes, prodRes] = await Promise.all([
+        supabase.from("categories").select("*").order("display_order"),
+        supabase.from("products").select("category_slug, category_label")
+      ]);
+      const data = catRes.data;
+      const prods = prodRes.data || [];
+
       if (!data || data.length === 0) {
         setCategories(staticDbCategories);
       } else {
-        setCategories(data);
+        const computed = data.map(c => {
+          const actualCount = prods.filter(p => p.category_slug === c.slug || p.category_label === c.label).length;
+          return {
+            ...c,
+            product_count: actualCount > 0 || c.product_count === 0 || c.product_count === null ? actualCount : c.product_count
+          };
+        });
+        setCategories(computed);
       }
     } catch {
       setCategories(staticDbCategories);
@@ -125,7 +141,23 @@ export default function AdminCategories() {
       display_order: parseInt(form.display_order) || 0,
     };
 
-    if (!supabase) { setSaving(false); return; }
+    if (!supabase) {
+      if (editId) {
+        setCategories((prev) => prev.map((c) => c.id === editId ? { ...c, ...payload } : c));
+        showToast("Category successfully updated.");
+      } else {
+        const newCat: DbCategory = {
+          id: Date.now().toString(),
+          ...payload,
+          created_at: new Date().toISOString()
+        };
+        setCategories((prev) => [...prev, newCat]);
+        showToast("New category added successfully.");
+      }
+      setShowForm(false);
+      setSaving(false);
+      return;
+    }
     try {
       if (editId) {
         await supabase.from("categories").update(payload).eq("id", editId);
@@ -253,7 +285,7 @@ export default function AdminCategories() {
                 Aggregated Products Linked
               </p>
               <p style={{ fontSize: 18, fontWeight: 800, color: "#111827", margin: 0, fontFamily: "'Inter', sans-serif" }}>
-                {formatNum(totalCategoryProducts)}+ Linked Catalog Items
+                {formatNum(totalCategoryProducts)} Linked Catalog Items
               </p>
             </div>
           </div>
@@ -557,7 +589,7 @@ export default function AdminCategories() {
                     {/* Product Count */}
                     <td style={{ padding: "14px 24px" }}>
                       <span style={{ fontSize: 13, color: "#111827", fontFamily: "'Inter',sans-serif", fontWeight: 700 }}>
-                        {formatNum(c.product_count)}+ products
+                        {formatNum(c.product_count)} {c.product_count === 1 ? "product" : "products"}
                       </span>
                     </td>
 

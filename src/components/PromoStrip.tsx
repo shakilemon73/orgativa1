@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
+import { useProducts, useCategories } from "@/lib/supabase-hooks";
 
 const P = "#2D5A27";
 
@@ -10,6 +11,8 @@ export default function PromoStrip() {
   const { isMobile, isTablet } = useResponsive();
   const { lang } = useLanguage();
   const { getSetting } = useSiteSettings();
+  const { data: allProducts } = useProducts();
+  const { data: allCategories } = useCategories();
 
   // Dynamic promo configuration from Admin Settings with elegant fallbacks
   const promos = [
@@ -27,6 +30,7 @@ export default function PromoStrip() {
       bg: "linear-gradient(135deg, #FFF7ED 0%, #FEE2A0 100%)",
       border: "#F59E0B30",
       slug: getSetting("promo_card1_slug", "honey"),
+      targetType: getSetting("promo_card1_target_type", "auto"),
     },
     {
       labelBn: getSetting("promo_card2_label_bn", "নতুন পণ্য"),
@@ -42,6 +46,7 @@ export default function PromoStrip() {
       bg: "linear-gradient(135deg, #F0FDF4 0%, #D1FAE5 100%)",
       border: "#2D5A2730",
       slug: getSetting("promo_card2_slug", "tea-coffee"),
+      targetType: getSetting("promo_card2_target_type", "auto"),
     },
     {
       labelBn: getSetting("promo_card3_label_bn", "সেরা বিক্রয়"),
@@ -57,14 +62,34 @@ export default function PromoStrip() {
       bg: "linear-gradient(135deg, #FAF5FF 0%, #EDE9FE 100%)",
       border: "#7C3AED30",
       slug: getSetting("promo_card3_slug", "grocery"),
+      targetType: getSetting("promo_card3_target_type", "auto"),
     },
   ];
+
+  function handlePromoClick(promo: typeof promos[0]) {
+    const slug = promo.slug;
+    if (promo.targetType === "product") {
+      navigate(`/product/${slug}`);
+      return;
+    }
+    if (promo.targetType === "category") {
+      navigate(`/category/${slug}`);
+      return;
+    }
+    // Auto-detect
+    const isProduct = allProducts.some(p => p.slug === slug);
+    if (isProduct) {
+      navigate(`/product/${slug}`);
+    } else {
+      navigate(`/category/${slug}`);
+    }
+  }
 
   return (
     <section style={{ marginTop: isMobile ? 32 : 80 }}>
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(3,1fr)", gap: isMobile ? 10 : 20 }}>
         {promos.map((p, idx) => (
-          <PromoCard key={idx} promo={p} onClick={() => navigate(`/category/${p.slug}`)} compact={isMobile} lang={lang} />
+          <PromoCard key={idx} promo={p} onClick={() => handlePromoClick(p)} compact={isMobile} lang={lang} />
         ))}
       </div>
     </section>

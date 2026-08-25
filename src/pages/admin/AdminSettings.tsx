@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AdminLayout from "./AdminLayout";
 import ImageUploader from "@/components/ImageUploader";
-import { supabase, DbSiteSetting } from "@/lib/supabase";
+import { supabase, DbSiteSetting, DbCategory } from "@/lib/supabase";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { useProducts, useCategories } from "@/lib/supabase-hooks";
@@ -27,7 +27,15 @@ import {
   ArrowRight,
   FolderTree,
   Sliders,
-  DollarSign
+  DollarSign,
+  Search,
+  Edit,
+  X,
+  Eye,
+  RefreshCw,
+  Filter,
+  Tag,
+  ArrowUpDown
 } from "lucide-react";
 
 const P = "#2D5A27";
@@ -39,7 +47,7 @@ export default function AdminSettings() {
   const { t } = useLanguage();
   const { refreshSettings } = useSiteSettings();
   const { data: allProducts, loading: productsLoading } = useProducts();
-  const { data: allCategories } = useCategories();
+  const { data: allCategories, refetch: refetchCategories } = useCategories();
 
   const [activeTab, setActiveTab] = useState<TabKey>("branding");
   const [settings, setSettings] = useState<DbSiteSetting[]>([]);
@@ -49,6 +57,24 @@ export default function AdminSettings() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [activeHeroSlot, setActiveHeroSlot] = useState<number | null>(null);
+
+  // Promo Card Product Picker Modal State
+  const [promoProductPicker, setPromoProductPicker] = useState<1 | 2 | 3 | null>(null);
+  const [promoPickerSearch, setPromoPickerSearch] = useState("");
+
+  // Shop By Category Inline Manager State
+  const [categoryModal, setCategoryModal] = useState<{
+    isOpen: boolean;
+    mode: "new" | "edit";
+    data: { id?: string; slug: string; label: string; icon: string; image_url: string; display_order: string };
+  } | null>(null);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryFilterSearch, setCategoryFilterSearch] = useState("");
+
+  // Customer Favorites / Trending State
+  const [activeTrendingTab, setActiveTrendingTab] = useState<"top_sellers" | "featured" | "deals">("top_sellers");
+  const [trendingSearch, setTrendingSearch] = useState("");
+  const [trendingCategoryFilter, setTrendingCategoryFilter] = useState("all");
 
   function showToast(message: string, type: "success" | "error" = "success") {
     setToast({ message, type });
@@ -372,6 +398,14 @@ export default function AdminSettings() {
   }
 
   // Helper for Trending Tabs Slugs
+  function getTrendingKey(tab: "top_sellers" | "featured" | "deals"): string {
+    switch (tab) {
+      case "top_sellers": return "trending_top_sellers_slugs";
+      case "featured": return "trending_featured_slugs";
+      case "deals": return "trending_deals_slugs";
+    }
+  }
+
   function getTabSlugs(key: string): string[] {
     try {
       const raw = values[key] || "";
@@ -395,6 +429,110 @@ export default function AdminSettings() {
       next = [...current, slug];
     }
     setValues((prev) => ({ ...prev, [key]: JSON.stringify(next) }));
+  }
+
+  function handleAutoFillTrendingTab(tab: "top_sellers" | "featured" | "deals") {
+    const key = getTrendingKey(tab);
+    let candidateSlugs: string[] = [];
+    if (tab === "top_sellers") {
+      candidateSlugs = [...allProducts]
+        .sort((a, b) => (b.reviews || 0) - (a.reviews || 0))
+        .slice(0, 6)
+        .map((p) => p.slug);
+    } else if (tab === "featured") {
+      candidateSlugs = [...allProducts]
+        .filter((p) => p.badge || p.rating >= 4.8)
+        .slice(0, 6)
+        .map((p) => p.slug);
+      if (candidateSlugs.length < 4) {
+        candidateSlugs = allProducts.slice(0, 6).map((p) => p.slug);
+      }
+    } else if (tab === "deals") {
+      candidateSlugs = [...allProducts]
+        .filter((p) => p.originalPrice && p.originalPrice > p.price)
+        .slice(0, 6)
+        .map((p) => p.slug);
+      if (candidateSlugs.length < 4) {
+        candidateSlugs = allProducts.slice(0, 6).map((p) => p.slug);
+      }
+    }
+    setValues((prev) => ({ ...prev, [key]: JSON.stringify(candidateSlugs) }));
+    showToast(`Auto-populated Tab with ${candidateSlugs.length} top products.`);
+  }
+
+  function handleClearTrendingTab(tab: "top_sellers" | "featured" | "deals") {
+    const key = getTrendingKey(tab);
+    setValues((prev) => ({ ...prev, [key]: JSON.stringify([]) }));
+    showToast("Cleared tab products.");
+  }
+
+  // 1-Click Promo Card Product Population
+  function handleSelectPromoProduct(cardNum: 1 | 2 | 3, product: any) {
+    const prefix = `promo_card${cardNum}`;
+    const defaultTagEn = cardNum === 1 ? "30% OFF" : cardNum === 2 ? "FRESH" : "#1";
+    const defaultTagBn = cardNum === 1 ? "৩০% ছাড়" : cardNum === 2 ? "তাজা" : "#১";
+    const defaultIcon = cardNum === 1 ? "hive" : cardNum === 2 ? "local_cafe" : "oil_barrel";
+
+    setValues((prev) => ({
+      ...prev,
+      [`${prefix}_title_en`]: product.nameEn || product.name || "",
+      [`${prefix}_title_bn`]: product.nameBn || product.name || "",
+      [`${prefix}_sub_en`]: product.weight ? `${product.weight} · Pure organic batch` : "Limited stock · Farm fresh",
+      [`${prefix}_sub_bn`]: "শতভাগ খাঁটি ও প্রাকৃতিক উপাদান",
+      [`${prefix}_slug`]: product.slug,
+      [`${prefix}_tag_en`]: product.badge || defaultTagEn,
+      [`${prefix}_tag_bn`]: defaultTagBn,
+      [`${prefix}_icon`]: defaultIcon,
+      [`${prefix}_target_type`]: "product"
+    }));
+
+    setPromoProductPicker(null);
+    showToast(`Card ${cardNum} synced with product "${product.nameEn || product.name}".`);
+  }
+
+  // Inline Category Save
+  async function handleSaveCategory(data: { id?: string; slug: string; label: string; icon: string; image_url: string; display_order: string }) {
+    setSavingCategory(true);
+    const payload = {
+      slug: data.slug.trim(),
+      label: data.label.trim(),
+      icon: data.icon.trim() || "category",
+      image_url: data.image_url.trim() || null,
+      display_order: parseInt(data.display_order) || 0,
+    };
+
+    try {
+      if (supabase) {
+        if (data.id) {
+          const { error } = await supabase.from("categories").update(payload).eq("id", data.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("categories").insert(payload);
+          if (error) throw error;
+        }
+      }
+      if (refetchCategories) refetchCategories();
+      setCategoryModal(null);
+      showToast(data.id ? "Category updated successfully." : "New category created successfully.");
+    } catch (e: any) {
+      showToast(e.message || "Failed to save category.", "error");
+    } finally {
+      setSavingCategory(false);
+    }
+  }
+
+  async function handleDeleteCategory(id: string, label: string) {
+    if (!confirm(`Are you sure you want to remove category "${label}"?`)) return;
+    try {
+      if (supabase) {
+        const { error } = await supabase.from("categories").delete().eq("id", id);
+        if (error) throw error;
+      }
+      if (refetchCategories) refetchCategories();
+      showToast(`Category "${label}" removed.`);
+    } catch (e: any) {
+      showToast(e.message || "Failed to delete category.", "error");
+    }
   }
 
   const TABS_CONFIG: Array<{ key: TabKey; label: string; icon: any; count: number }> = [
@@ -826,7 +964,7 @@ export default function AdminSettings() {
               <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                 <SectionCard
                   title="Shop By Category Section"
-                  subtitle="Customize the titles for the Shop By Category section and easily manage custom categories."
+                  subtitle="Customize the section headings and directly manage, create, edit, or reorder all store categories."
                   icon={FolderTree}
                   onSaveAll={() => saveSectionSettings([
                     "category_section_title_en",
@@ -857,7 +995,7 @@ export default function AdminSettings() {
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }}>
                     <div>
                       <label style={labelStyle}>Section Nature Tag (English)</label>
                       <input
@@ -878,43 +1016,200 @@ export default function AdminSettings() {
                     </div>
                   </div>
 
-                  {/* Direct Category Manager Shortcut */}
+                  {/* Inline Categories & Shelves Catalog Management */}
                   <div style={{
-                    backgroundColor: "#F4F8F3",
-                    border: "1.5px solid #D2E4CE",
-                    borderRadius: 14,
-                    padding: "18px 22px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 16
+                    backgroundColor: "#F9FAF9",
+                    border: "1.5px solid #E2EDE0",
+                    borderRadius: 16,
+                    padding: 20,
                   }}>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#1E3A1A", fontFamily: "'Inter',sans-serif" }}>
-                        Custom Categories & Shelves Management
-                      </h4>
-                      <p style={{ margin: "4px 0 0", fontSize: 12, color: "#4A6B46" }}>
-                        Add new custom categories, upload cover artwork, reorder categories, and edit Bangla/English labels.
-                      </p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#111827", display: "flex", alignItems: "center", gap: 8 }}>
+                          <span>Store Categories Catalog ({allCategories.length})</span>
+                        </h4>
+                        <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B726A" }}>
+                          Categories displayed in the homepage grid. Reorder, edit artwork, or add new shelves.
+                        </p>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <div style={{ position: "relative", minWidth: 200 }}>
+                          <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#9CA3AF" }} />
+                          <input
+                            type="text"
+                            placeholder="Filter categories..."
+                            value={categoryFilterSearch}
+                            onChange={(e) => setCategoryFilterSearch(e.target.value)}
+                            style={{
+                              ...inputStyle,
+                              paddingLeft: 30,
+                              paddingTop: 6,
+                              paddingBottom: 6,
+                              fontSize: 12,
+                              backgroundColor: "#fff"
+                            }}
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setCategoryModal({
+                            isOpen: true,
+                            mode: "new",
+                            data: {
+                              slug: "",
+                              label: "",
+                              icon: "category",
+                              image_url: "",
+                              display_order: String(allCategories.length + 1)
+                            }
+                          })}
+                          style={{
+                            backgroundColor: P,
+                            color: "#fff",
+                            border: "none",
+                            padding: "8px 16px",
+                            borderRadius: 10,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            cursor: "pointer",
+                            boxShadow: "0 2px 6px rgba(45,90,39,0.2)"
+                          }}
+                        >
+                          <Plus size={15} /> Add Category
+                        </button>
+                      </div>
                     </div>
-                    <Link href="/admin/categories"
-                      style={{
-                        backgroundColor: P,
-                        color: "#fff",
-                        padding: "10px 20px",
-                        borderRadius: 10,
-                        textDecoration: "none",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        whiteSpace: "nowrap",
-                        boxShadow: "0 2px 8px rgba(45,90,39,0.25)"
-                      }}
-                    >
-                      <FolderTree size={16} /> Open Category Manager <ArrowRight size={14} />
-                    </Link>
+
+                    {/* Category Table */}
+                    <div style={{ overflowX: "auto", border: "1px solid #E5EFE2", borderRadius: 12, backgroundColor: "#fff" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ backgroundColor: "#F4F8F3", borderBottom: "1px solid #E5EFE2", color: "#374151" }}>
+                            <th style={{ padding: "10px 14px", fontWeight: 700, width: 60 }}>Order</th>
+                            <th style={{ padding: "10px 14px", fontWeight: 700, width: 80 }}>Icon/Cover</th>
+                            <th style={{ padding: "10px 14px", fontWeight: 700 }}>Label</th>
+                            <th style={{ padding: "10px 14px", fontWeight: 700 }}>Slug</th>
+                            <th style={{ padding: "10px 14px", fontWeight: 700, width: 120 }}>Catalog Items</th>
+                            <th style={{ padding: "10px 14px", fontWeight: 700, width: 130, textAlign: "right" }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allCategories
+                            .filter((c) => {
+                              if (!categoryFilterSearch.trim()) return true;
+                              const q = categoryFilterSearch.toLowerCase();
+                              return c.label.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q);
+                            })
+                            .map((cat, idx) => {
+                              const productCount = allProducts.filter((p) => (p.categorySlug || p.category) === cat.slug).length;
+                              return (
+                                <tr key={cat.id || cat.slug || idx} style={{ borderBottom: "1px solid #F3F4F6", transition: "background-color 0.15s" }}>
+                                  <td style={{ padding: "10px 14px", fontWeight: 700, color: "#6B726A" }}>
+                                    #{cat.display_order ?? idx + 1}
+                                  </td>
+                                  <td style={{ padding: "10px 14px" }}>
+                                    <div style={{
+                                      width: 42,
+                                      height: 42,
+                                      borderRadius: 10,
+                                      backgroundColor: "#F3F4F6",
+                                      border: "1px solid #E5E7EB",
+                                      overflow: "hidden",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center"
+                                    }}>
+                                      {cat.image_url ? (
+                                        <img src={cat.image_url} alt={cat.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                      ) : (
+                                        <span className="material-symbols-outlined" style={{ fontSize: 20, color: P }}>
+                                          {cat.icon || "category"}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: "10px 14px" }}>
+                                    <div style={{ fontWeight: 700, color: "#111827" }}>{cat.label}</div>
+                                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>Icon: {cat.icon || "category"}</div>
+                                  </td>
+                                  <td style={{ padding: "10px 14px" }}>
+                                    <code style={{ fontSize: 11, backgroundColor: "#F3F4F6", padding: "2px 6px", borderRadius: 4, color: "#4B5563" }}>
+                                      {cat.slug}
+                                    </code>
+                                  </td>
+                                  <td style={{ padding: "10px 14px" }}>
+                                    <span style={{
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      backgroundColor: productCount > 0 ? "#E8F5E3" : "#FEE2E2",
+                                      color: productCount > 0 ? P_DARK : "#991B1B",
+                                      padding: "3px 8px",
+                                      borderRadius: 6
+                                    }}>
+                                      {productCount} {productCount === 1 ? "Product" : "Products"}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: "10px 14px", textAlign: "right" }}>
+                                    <div style={{ display: "inline-flex", gap: 6 }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setCategoryModal({
+                                          isOpen: true,
+                                          mode: "edit",
+                                          data: {
+                                            id: cat.id,
+                                            slug: cat.slug,
+                                            label: cat.label,
+                                            icon: cat.icon || "category",
+                                            image_url: cat.image_url || "",
+                                            display_order: String(cat.display_order ?? idx + 1)
+                                          }
+                                        })}
+                                        style={{
+                                          padding: "5px 9px",
+                                          borderRadius: 8,
+                                          backgroundColor: "#F3F4F6",
+                                          border: "1px solid #D1D5DB",
+                                          color: "#374151",
+                                          cursor: "pointer",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 4,
+                                          fontSize: 12
+                                        }}
+                                      >
+                                        <Edit size={13} /> Edit
+                                      </button>
+                                      {cat.id && (
+                                        <button
+                                          type="button"
+                                          onClick={() => cat.id && handleDeleteCategory(cat.id, cat.label)}
+                                          style={{
+                                            padding: "5px 8px",
+                                            borderRadius: 8,
+                                            backgroundColor: "#FEF2F2",
+                                            border: "1px solid #FECACA",
+                                            color: "#DC2626",
+                                            cursor: "pointer",
+                                            fontSize: 12
+                                          }}
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </SectionCard>
               </div>
@@ -925,12 +1220,12 @@ export default function AdminSettings() {
               <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                 <SectionCard
                   title="Homepage Promo Cards & Top Deals"
-                  subtitle="Customize the 3 interactive deal cards displayed on the homepage (Flash Deal, New Arrival, Best Seller) with custom icons, badges, colors, and titles."
+                  subtitle="Customize the 3 interactive deal cards displayed on the homepage with 1-click product catalog synchronization, custom badges, icons, and colors."
                   icon={Megaphone}
                   onSaveAll={() => saveSectionSettings([
-                    "promo_card1_label_en", "promo_card1_label_bn", "promo_card1_tag_en", "promo_card1_tag_bn", "promo_card1_title_en", "promo_card1_title_bn", "promo_card1_sub_en", "promo_card1_sub_bn", "promo_card1_icon", "promo_card1_color", "promo_card1_slug",
-                    "promo_card2_label_en", "promo_card2_label_bn", "promo_card2_tag_en", "promo_card2_tag_bn", "promo_card2_title_en", "promo_card2_title_bn", "promo_card2_sub_en", "promo_card2_sub_bn", "promo_card2_icon", "promo_card2_color", "promo_card2_slug",
-                    "promo_card3_label_en", "promo_card3_label_bn", "promo_card3_tag_en", "promo_card3_tag_bn", "promo_card3_title_en", "promo_card3_title_bn", "promo_card3_sub_en", "promo_card3_sub_bn", "promo_card3_icon", "promo_card3_color", "promo_card3_slug",
+                    "promo_card1_label_en", "promo_card1_label_bn", "promo_card1_tag_en", "promo_card1_tag_bn", "promo_card1_title_en", "promo_card1_title_bn", "promo_card1_sub_en", "promo_card1_sub_bn", "promo_card1_icon", "promo_card1_color", "promo_card1_slug", "promo_card1_target_type",
+                    "promo_card2_label_en", "promo_card2_label_bn", "promo_card2_tag_en", "promo_card2_tag_bn", "promo_card2_title_en", "promo_card2_title_bn", "promo_card2_sub_en", "promo_card2_sub_bn", "promo_card2_icon", "promo_card2_color", "promo_card2_slug", "promo_card2_target_type",
+                    "promo_card3_label_en", "promo_card3_label_bn", "promo_card3_tag_en", "promo_card3_tag_bn", "promo_card3_title_en", "promo_card3_title_bn", "promo_card3_sub_en", "promo_card3_sub_bn", "promo_card3_icon", "promo_card3_color", "promo_card3_slug", "promo_card3_target_type",
                     "promo_topbar_text_en", "promo_topbar_text_bn"
                   ])}
                   savingAll={savingSection}
@@ -961,14 +1256,42 @@ export default function AdminSettings() {
                   </div>
 
                   {/* Card 1: Flash Deal */}
-                  <div style={{ backgroundColor: "#FFFBF5", border: "1.5px solid #FEE2A0", borderRadius: 14, padding: 18, marginBottom: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 24, color: values["promo_card1_color"] || "#D64545" }}>
-                        {values["promo_card1_icon"] || "hive"}
-                      </span>
-                      <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#78350F" }}>
-                        Card 1: Flash Deal (Hive / Honey Highlight)
-                      </h4>
+                  <div style={{ backgroundColor: "#FFFBF5", border: "1.5px solid #FEE2A0", borderRadius: 16, padding: 20, marginBottom: 24 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 26, color: values["promo_card1_color"] || "#D64545" }}>
+                          {values["promo_card1_icon"] || "hive"}
+                        </span>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#78350F" }}>
+                            Card 1: Flash Deal (Hive / Honey Highlight)
+                          </h4>
+                          <span style={{ fontSize: 11, color: "#B45309" }}>Target Link: {values["promo_card1_slug"] || "honey"} ({values["promo_card1_target_type"] || "auto"})</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPromoProductPicker(1);
+                          setPromoPickerSearch("");
+                        }}
+                        style={{
+                          backgroundColor: "#D64545",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "7px 14px",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6
+                        }}
+                      >
+                        <Sparkles size={14} /> 1-Click Select Product
+                      </button>
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -1012,7 +1335,7 @@ export default function AdminSettings() {
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
                       <div>
                         <label style={labelStyle}>Icon (Material Symbol)</label>
                         <input value={values["promo_card1_icon"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card1_icon: e.target.value }))} style={inputStyle} placeholder="hive" />
@@ -1022,21 +1345,61 @@ export default function AdminSettings() {
                         <input value={values["promo_card1_color"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card1_color: e.target.value }))} style={inputStyle} placeholder="#D64545" />
                       </div>
                       <div>
-                        <label style={labelStyle}>Target Category Slug</label>
-                        <input value={values["promo_card1_slug"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card1_slug: e.target.value }))} style={inputStyle} placeholder="honey" />
+                        <label style={labelStyle}>Target Item Slug</label>
+                        <input value={values["promo_card1_slug"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card1_slug: e.target.value }))} style={inputStyle} placeholder="wild-forest-honey" />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Link Type</label>
+                        <select
+                          value={values["promo_card1_target_type"] || "auto"}
+                          onChange={(e) => setValues((p) => ({ ...p, promo_card1_target_type: e.target.value }))}
+                          style={inputStyle}
+                        >
+                          <option value="auto">Auto-Detect</option>
+                          <option value="product">Product Details Page</option>
+                          <option value="category">Category Collection</option>
+                        </select>
                       </div>
                     </div>
                   </div>
 
                   {/* Card 2: New Arrival */}
-                  <div style={{ backgroundColor: "#F7FEFA", border: "1.5px solid #D1FAE5", borderRadius: 14, padding: 18, marginBottom: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 24, color: values["promo_card2_color"] || P }}>
-                        {values["promo_card2_icon"] || "local_cafe"}
-                      </span>
-                      <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#065F46" }}>
-                        Card 2: New Arrival (Local Cafe / Green Tea Highlight)
-                      </h4>
+                  <div style={{ backgroundColor: "#F7FEFA", border: "1.5px solid #D1FAE5", borderRadius: 16, padding: 20, marginBottom: 24 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 26, color: values["promo_card2_color"] || P }}>
+                          {values["promo_card2_icon"] || "local_cafe"}
+                        </span>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#065F46" }}>
+                            Card 2: New Arrival (Local Cafe / Green Tea Highlight)
+                          </h4>
+                          <span style={{ fontSize: 11, color: "#047857" }}>Target Link: {values["promo_card2_slug"] || "tea-coffee"} ({values["promo_card2_target_type"] || "auto"})</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPromoProductPicker(2);
+                          setPromoPickerSearch("");
+                        }}
+                        style={{
+                          backgroundColor: P,
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "7px 14px",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6
+                        }}
+                      >
+                        <Sparkles size={14} /> 1-Click Select Product
+                      </button>
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -1080,7 +1443,7 @@ export default function AdminSettings() {
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
                       <div>
                         <label style={labelStyle}>Icon (Material Symbol)</label>
                         <input value={values["promo_card2_icon"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card2_icon: e.target.value }))} style={inputStyle} placeholder="local_cafe" />
@@ -1090,21 +1453,61 @@ export default function AdminSettings() {
                         <input value={values["promo_card2_color"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card2_color: e.target.value }))} style={inputStyle} placeholder="#2D5A27" />
                       </div>
                       <div>
-                        <label style={labelStyle}>Target Category Slug</label>
-                        <input value={values["promo_card2_slug"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card2_slug: e.target.value }))} style={inputStyle} placeholder="tea-coffee" />
+                        <label style={labelStyle}>Target Item Slug</label>
+                        <input value={values["promo_card2_slug"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card2_slug: e.target.value }))} style={inputStyle} placeholder="sylhet-green-tea" />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Link Type</label>
+                        <select
+                          value={values["promo_card2_target_type"] || "auto"}
+                          onChange={(e) => setValues((p) => ({ ...p, promo_card2_target_type: e.target.value }))}
+                          style={inputStyle}
+                        >
+                          <option value="auto">Auto-Detect</option>
+                          <option value="product">Product Details Page</option>
+                          <option value="category">Category Collection</option>
+                        </select>
                       </div>
                     </div>
                   </div>
 
                   {/* Card 3: Best Seller */}
-                  <div style={{ backgroundColor: "#FAF5FF", border: "1.5px solid #EDE9FE", borderRadius: 14, padding: 18 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 24, color: values["promo_card3_color"] || "#7C3AED" }}>
-                        {values["promo_card3_icon"] || "oil_barrel"}
-                      </span>
-                      <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#5B21B6" }}>
-                        Card 3: Best Seller (Oil Barrel / Mustard Oil Highlight)
-                      </h4>
+                  <div style={{ backgroundColor: "#FAF5FF", border: "1.5px solid #EDE9FE", borderRadius: 16, padding: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 26, color: values["promo_card3_color"] || "#7C3AED" }}>
+                          {values["promo_card3_icon"] || "oil_barrel"}
+                        </span>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#5B21B6" }}>
+                            Card 3: Best Seller (Oil Barrel / Mustard Oil Highlight)
+                          </h4>
+                          <span style={{ fontSize: 11, color: "#6D28D9" }}>Target Link: {values["promo_card3_slug"] || "grocery"} ({values["promo_card3_target_type"] || "auto"})</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPromoProductPicker(3);
+                          setPromoPickerSearch("");
+                        }}
+                        style={{
+                          backgroundColor: "#7C3AED",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 8,
+                          padding: "7px 14px",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6
+                        }}
+                      >
+                        <Sparkles size={14} /> 1-Click Select Product
+                      </button>
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -1148,7 +1551,7 @@ export default function AdminSettings() {
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
                       <div>
                         <label style={labelStyle}>Icon (Material Symbol)</label>
                         <input value={values["promo_card3_icon"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card3_icon: e.target.value }))} style={inputStyle} placeholder="oil_barrel" />
@@ -1158,8 +1561,20 @@ export default function AdminSettings() {
                         <input value={values["promo_card3_color"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card3_color: e.target.value }))} style={inputStyle} placeholder="#7C3AED" />
                       </div>
                       <div>
-                        <label style={labelStyle}>Target Category Slug</label>
-                        <input value={values["promo_card3_slug"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card3_slug: e.target.value }))} style={inputStyle} placeholder="grocery" />
+                        <label style={labelStyle}>Target Item Slug</label>
+                        <input value={values["promo_card3_slug"] ?? ""} onChange={(e) => setValues((p) => ({ ...p, promo_card3_slug: e.target.value }))} style={inputStyle} placeholder="cold-pressed-mustard-oil" />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Link Type</label>
+                        <select
+                          value={values["promo_card3_target_type"] || "auto"}
+                          onChange={(e) => setValues((p) => ({ ...p, promo_card3_target_type: e.target.value }))}
+                          style={inputStyle}
+                        >
+                          <option value="auto">Auto-Detect</option>
+                          <option value="product">Product Details Page</option>
+                          <option value="category">Category Collection</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -1292,8 +1707,8 @@ export default function AdminSettings() {
             {activeTab === "trending" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                 <SectionCard
-                  title="Customer Favorites / Trending Tabs"
-                  subtitle="Configure which products appear in the 3 homepage tab views (Top Sellers, Featured, Deals)."
+                  title="Customer Favorites & Trending Tabs"
+                  subtitle="Manage exactly which products appear in the 3 homepage tabs (Top Sellers, Featured, Deals), reorder items, or auto-fill with bestsellers."
                   icon={Flame}
                   onSaveAll={() => saveSectionSettings([
                     "trending_mode",
@@ -1303,12 +1718,12 @@ export default function AdminSettings() {
                   ])}
                   savingAll={savingSection}
                 >
-                  <div style={{ marginBottom: 20 }}>
+                  <div style={{ marginBottom: 24 }}>
                     <label style={labelStyle}>Product Selection Mode</label>
                     <div style={{ display: "flex", gap: 12 }}>
                       {[
-                        { val: "auto", label: "Automatic (By Highest Rated & Sales Count)" },
-                        { val: "manual", label: "Manual Custom List (Configured Below)" },
+                        { val: "auto", label: "⚡ Automatic Mode (Top rated & highest order volume)" },
+                        { val: "manual", label: "🎯 Manual Catalog List (Fully customized below)" },
                       ].map((opt) => (
                         <button
                           key={opt.val}
@@ -1333,102 +1748,265 @@ export default function AdminSettings() {
                     </div>
                   </div>
 
-                  {/* Tab 1: Top Sellers */}
-                  <div style={{ marginBottom: 20, backgroundColor: "#F7FAF6", border: "1px solid #E2EDE0", borderRadius: 14, padding: 16 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1F2937" }}>
-                        Tab 1: Top Sellers (সেরা বিক্রীত) — {getTabSlugs("trending_top_sellers_slugs").length} selected
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 180, overflowY: "auto" }}>
-                      {allProducts.map((p) => {
-                        const sel = getTabSlugs("trending_top_sellers_slugs").includes(p.slug);
-                        return (
+                  {/* Interactive Tab Switcher */}
+                  <div style={{
+                    backgroundColor: "#F7FAF6",
+                    border: "1.5px solid #DCEAD8",
+                    borderRadius: 16,
+                    padding: 20,
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        {[
+                          { key: "top_sellers" as const, label: "🔥 Top Sellers (সেরা বিক্রীত)", count: getTabSlugs("trending_top_sellers_slugs").length },
+                          { key: "featured" as const, label: "⭐ Featured (বিশেষ পছন্দ)", count: getTabSlugs("trending_featured_slugs").length },
+                          { key: "deals" as const, label: "🏷️ Deals (অফারসমূহ)", count: getTabSlugs("trending_deals_slugs").length },
+                        ].map((tb) => (
                           <button
-                            key={p.slug}
+                            key={tb.key}
                             type="button"
-                            onClick={() => toggleTabSlug("trending_top_sellers_slugs", p.slug)}
+                            onClick={() => setActiveTrendingTab(tb.key)}
                             style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              padding: "6px 12px",
-                              borderRadius: 8,
-                              backgroundColor: sel ? P : "#fff",
-                              color: sel ? "#fff" : "#374151",
-                              border: `1px solid ${sel ? P : "#D1D5DB"}`,
-                              cursor: "pointer"
+                              padding: "9px 16px",
+                              borderRadius: 10,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              backgroundColor: activeTrendingTab === tb.key ? P : "#fff",
+                              color: activeTrendingTab === tb.key ? "#fff" : "#374151",
+                              border: `1.5px solid ${activeTrendingTab === tb.key ? P : "#D1D5DB"}`,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6
                             }}
                           >
-                            {sel ? "✓ " : "+ "}{p.nameEn || p.name}
+                            <span>{tb.label}</span>
+                            <span style={{
+                              backgroundColor: activeTrendingTab === tb.key ? "rgba(255,255,255,0.25)" : "#E5E7EB",
+                              color: activeTrendingTab === tb.key ? "#fff" : "#1F2937",
+                              fontSize: 11,
+                              padding: "2px 7px",
+                              borderRadius: 99
+                            }}>
+                              {tb.count}
+                            </span>
                           </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                        ))}
+                      </div>
 
-                  {/* Tab 2: Featured */}
-                  <div style={{ marginBottom: 20, backgroundColor: "#F7FAF6", border: "1px solid #E2EDE0", borderRadius: 14, padding: 16 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1F2937" }}>
-                        Tab 2: Featured (জনপ্রিয়) — {getTabSlugs("trending_featured_slugs").length} selected
-                      </span>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleAutoFillTrendingTab(activeTrendingTab)}
+                          style={{
+                            backgroundColor: "#EEF8EC",
+                            color: P_DARK,
+                            border: `1.5px solid ${P}`,
+                            padding: "8px 14px",
+                            borderRadius: 10,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6
+                          }}
+                        >
+                          <Sparkles size={14} /> Auto-Fill Top 6
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleClearTrendingTab(activeTrendingTab)}
+                          style={{
+                            backgroundColor: "#FFF1F2",
+                            color: "#BE123C",
+                            border: "1.5px solid #FECDD3",
+                            padding: "8px 12px",
+                            borderRadius: 10,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: "pointer"
+                          }}
+                        >
+                          Clear Tab
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 180, overflowY: "auto" }}>
-                      {allProducts.map((p) => {
-                        const sel = getTabSlugs("trending_featured_slugs").includes(p.slug);
-                        return (
-                          <button
-                            key={p.slug}
-                            type="button"
-                            onClick={() => toggleTabSlug("trending_featured_slugs", p.slug)}
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              padding: "6px 12px",
-                              borderRadius: 8,
-                              backgroundColor: sel ? P : "#fff",
-                              color: sel ? "#fff" : "#374151",
-                              border: `1px solid ${sel ? P : "#D1D5DB"}`,
-                              cursor: "pointer"
-                            }}
-                          >
-                            {sel ? "✓ " : "+ "}{p.nameEn || p.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
 
-                  {/* Tab 3: Deals */}
-                  <div style={{ backgroundColor: "#F7FAF6", border: "1px solid #E2EDE0", borderRadius: 14, padding: 16 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1F2937" }}>
-                        Tab 3: Deals (অফারসমূহ) — {getTabSlugs("trending_deals_slugs").length} selected
-                      </span>
+                    {/* Selected Products in this Tab */}
+                    <div style={{ marginBottom: 20 }}>
+                      <label style={{ ...labelStyle, marginBottom: 8 }}>
+                        Currently Displayed Products ({getTabSlugs(getTrendingKey(activeTrendingTab)).length} / 8 slots)
+                      </label>
+
+                      {getTabSlugs(getTrendingKey(activeTrendingTab)).length === 0 ? (
+                        <div style={{
+                          padding: 24,
+                          textAlign: "center",
+                          backgroundColor: "#fff",
+                          border: "1.5px dashed #D1D5DB",
+                          borderRadius: 12,
+                          color: "#6B726A"
+                        }}>
+                          No products assigned to this tab. Pick items from the store catalog below or click "Auto-Fill Top 6".
+                        </div>
+                      ) : (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+                          {getTabSlugs(getTrendingKey(activeTrendingTab)).map((slug, idx) => {
+                            const product = allProducts.find((p) => p.slug === slug);
+                            return (
+                              <div
+                                key={slug}
+                                style={{
+                                  backgroundColor: "#fff",
+                                  border: "1.5px solid #D2E4CE",
+                                  borderRadius: 12,
+                                  padding: 10,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 10,
+                                  position: "relative"
+                                }}
+                              >
+                                <div style={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 8,
+                                  backgroundColor: "#F3F4F6",
+                                  overflow: "hidden",
+                                  flexShrink: 0
+                                }}>
+                                  <img
+                                    src={product?.image || "/assets/placeholder.jpg"}
+                                    alt={product?.name || slug}
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                  />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 11, color: "#6B726A", fontWeight: 700 }}>Slot #{idx + 1}</div>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {product?.nameEn || product?.name || slug}
+                                  </div>
+                                  <div style={{ fontSize: 11, color: P, fontWeight: 700 }}>৳{product?.price || 0}</div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleTabSlug(getTrendingKey(activeTrendingTab), slug)}
+                                  title="Remove from tab"
+                                  style={{
+                                    width: 26,
+                                    height: 26,
+                                    borderRadius: 6,
+                                    backgroundColor: "#FEE2E2",
+                                    border: "1px solid #FECACA",
+                                    color: "#DC2626",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 180, overflowY: "auto" }}>
-                      {allProducts.map((p) => {
-                        const sel = getTabSlugs("trending_deals_slugs").includes(p.slug);
-                        return (
-                          <button
-                            key={p.slug}
-                            type="button"
-                            onClick={() => toggleTabSlug("trending_deals_slugs", p.slug)}
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              padding: "6px 12px",
-                              borderRadius: 8,
-                              backgroundColor: sel ? P : "#fff",
-                              color: sel ? "#fff" : "#374151",
-                              border: `1px solid ${sel ? P : "#D1D5DB"}`,
-                              cursor: "pointer"
-                            }}
+
+                    {/* Catalog Picker beneath */}
+                    <div style={{ borderTop: "1px solid #DCEAD8", paddingTop: 16 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>
+                          Store Product Catalog (Click "+ Add" to add to this tab)
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <select
+                            value={trendingCategoryFilter}
+                            onChange={(e) => setTrendingCategoryFilter(e.target.value)}
+                            style={{ ...inputStyle, width: "auto", fontSize: 12, padding: "6px 10px" }}
                           >
-                            {sel ? "✓ " : "+ "}{p.nameEn || p.name}
-                          </button>
-                        );
-                      })}
+                            <option value="all">All Categories</option>
+                            {allCategories.map((cat) => (
+                              <option key={cat.slug} value={cat.slug}>{cat.label}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="Search products..."
+                            value={trendingSearch}
+                            onChange={(e) => setTrendingSearch(e.target.value)}
+                            style={{ ...inputStyle, width: 180, fontSize: 12, padding: "6px 10px" }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                        gap: 10,
+                        maxHeight: 280,
+                        overflowY: "auto",
+                        paddingRight: 4
+                      }}>
+                        {allProducts
+                          .filter((p) => {
+                            if (trendingCategoryFilter !== "all" && (p.categorySlug || p.category) !== trendingCategoryFilter) return false;
+                            if (trendingSearch.trim()) {
+                              const q = trendingSearch.toLowerCase();
+                              return (p.nameEn || p.name).toLowerCase().includes(q) || (p.name || "").toLowerCase().includes(q);
+                            }
+                            return true;
+                          })
+                          .map((p) => {
+                            const isSelected = getTabSlugs(getTrendingKey(activeTrendingTab)).includes(p.slug);
+                            return (
+                              <div
+                                key={p.slug}
+                                style={{
+                                  backgroundColor: isSelected ? "#E8F5E3" : "#fff",
+                                  border: `1.5px solid ${isSelected ? P : "#E5E7EB"}`,
+                                  borderRadius: 10,
+                                  padding: "8px 10px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8
+                                }}
+                              >
+                                <img
+                                  src={p.image || "/assets/placeholder.jpg"}
+                                  alt={p.name}
+                                  style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover", flexShrink: 0 }}
+                                />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {p.nameEn || p.name}
+                                  </div>
+                                  <div style={{ fontSize: 10, color: "#6B726A" }}>৳{p.price}</div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleTabSlug(getTrendingKey(activeTrendingTab), p.slug)}
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRadius: 6,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    backgroundColor: isSelected ? P : "#F3F4F6",
+                                    color: isSelected ? "#fff" : "#374151",
+                                    border: `1px solid ${isSelected ? P : "#D1D5DB"}`,
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap"
+                                  }}
+                                >
+                                  {isSelected ? "✓ In Tab" : "+ Add"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                      </div>
                     </div>
                   </div>
                 </SectionCard>
@@ -1673,6 +2251,283 @@ export default function AdminSettings() {
           </div>
         )}
       </div>
+
+      {/* CATEGORY ADD/EDIT MODAL */}
+      {categoryModal && categoryModal.isOpen && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: 16,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            backgroundColor: "#fff",
+            borderRadius: 16,
+            width: "100%",
+            maxWidth: 480,
+            padding: 24,
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid #E5E7EB", paddingBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#111827" }}>
+                {categoryModal.mode === "new" ? "Add New Store Category" : "Edit Category"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCategoryModal(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={labelStyle}>Category Name / Label (Required)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Organic Honey & Ghee"
+                  value={categoryModal.data.label || ""}
+                  onChange={(e) => {
+                    const label = e.target.value;
+                    const autoSlug = categoryModal.mode === "new" && !categoryModal.data.slug
+                      ? label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+                      : categoryModal.data.slug;
+                    setCategoryModal((prev) => prev ? ({
+                      ...prev,
+                      data: { ...prev.data, label, slug: autoSlug || prev.data.slug }
+                    }) : null);
+                  }}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Slug / URL Key (Unique)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. honey-ghee"
+                  value={categoryModal.data.slug || ""}
+                  onChange={(e) => setCategoryModal((prev) => prev ? ({
+                    ...prev,
+                    data: { ...prev.data, slug: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") }
+                  }) : null)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Material Icon Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. hive, spa, local_cafe"
+                    value={categoryModal.data.icon || ""}
+                    onChange={(e) => setCategoryModal((prev) => prev ? ({
+                      ...prev,
+                      data: { ...prev.data, icon: e.target.value }
+                    }) : null)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Display Order</label>
+                  <input
+                    type="number"
+                    placeholder="1, 2, 3..."
+                    value={categoryModal.data.display_order || "1"}
+                    onChange={(e) => setCategoryModal((prev) => prev ? ({
+                      ...prev,
+                      data: { ...prev.data, display_order: e.target.value }
+                    }) : null)}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Cover Artwork Image URL</label>
+                <input
+                  type="text"
+                  placeholder="https://images.unsplash.com/..."
+                  value={categoryModal.data.image_url || ""}
+                  onChange={(e) => setCategoryModal((prev) => prev ? ({
+                    ...prev,
+                    data: { ...prev.data, image_url: e.target.value }
+                  }) : null)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setCategoryModal(null)}
+                  style={{
+                    padding: "9px 16px",
+                    borderRadius: 10,
+                    backgroundColor: "#F3F4F6",
+                    border: "1px solid #D1D5DB",
+                    color: "#374151",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => categoryModal && handleSaveCategory(categoryModal.data)}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: 10,
+                    backgroundColor: P,
+                    border: "none",
+                    color: "#fff",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(45,90,39,0.25)"
+                  }}
+                >
+                  Save Category
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROMO CARD PRODUCT PICKER MODAL */}
+      {promoProductPicker !== null && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: 16,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            backgroundColor: "#fff",
+            borderRadius: 16,
+            width: "100%",
+            maxWidth: 640,
+            maxHeight: "85vh",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)"
+          }}>
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid #E5E7EB", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#111827" }}>
+                  Select Product for Promo Card #{promoProductPicker}
+                </h3>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B726A" }}>
+                  Clicking any product will automatically fill the promo card's title, subtitle, badge, and target link.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPromoProductPicker(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: "12px 20px", borderBottom: "1px solid #F3F4F6" }}>
+              <div style={{ position: "relative" }}>
+                <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9CA3AF" }} />
+                <input
+                  type="text"
+                  placeholder="Search products by English or Bangla name..."
+                  value={promoPickerSearch}
+                  onChange={(e) => setPromoPickerSearch(e.target.value)}
+                  style={{ ...inputStyle, paddingLeft: 36 }}
+                />
+              </div>
+            </div>
+
+            <div style={{ padding: "16px 20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+              {allProducts
+                .filter((p) => {
+                  if (!promoPickerSearch.trim()) return true;
+                  const q = promoPickerSearch.toLowerCase();
+                  return (p.nameEn || p.name).toLowerCase().includes(q) || (p.name || "").toLowerCase().includes(q) || (p.categorySlug || "").includes(q);
+                })
+                .map((p) => (
+                  <div
+                    key={p.slug}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: 12,
+                      border: "1.5px solid #E5E7EB",
+                      borderRadius: 12,
+                      gap: 12,
+                      transition: "border-color 0.15s, background-color 0.15s"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                      <img
+                        src={p.image || "/assets/placeholder.jpg"}
+                        alt={p.name}
+                        style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+                      />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>
+                          {p.nameEn || p.name}
+                        </div>
+                        {p.name && <div style={{ fontSize: 12, color: "#4B5563" }}>{p.name}</div>}
+                        <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 2 }}>
+                          Category: <span style={{ color: "#374151", fontWeight: 600 }}>{p.categorySlug || p.category || "General"}</span> • Price: <span style={{ color: P, fontWeight: 700 }}>৳{p.price}</span>
+                          {p.originalPrice && p.originalPrice > p.price && (
+                            <span style={{ color: "#DC2626", marginLeft: 6 }}>
+                              ({Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)}% OFF)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectPromoProduct(promoProductPicker, p)}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: 8,
+                        backgroundColor: P,
+                        color: "#fff",
+                        border: "none",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4
+                      }}
+                    >
+                      <Check size={14} /> Assign to Card {promoProductPicker}
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .animate-spin {

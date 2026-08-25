@@ -126,14 +126,18 @@ export default function AdminOrderDetail() {
         supabase.from("order_items").select("*").eq("order_id", id),
       ]).then(([orderRes, itemsRes]) => {
         if (!orderRes.data) {
-          applyDemo();
+          setOrder(null);
+          setItems([]);
+          setLoading(false);
         } else {
           setOrder(orderRes.data);
           setItems(itemsRes.data ?? []);
           setLoading(false);
         }
       }).catch(() => {
-        applyDemo();
+        setOrder(null);
+        setItems([]);
+        setLoading(false);
       });
     };
 

@@ -35,11 +35,14 @@ function dbProductToProduct(p: DbProduct): Product {
 function dbCategoryToCategory(c: DbCategory): Category {
   const match = staticCategories.find((sc) => sc.slug === c.slug);
   return {
+    id: c.id,
     slug: c.slug,
     label: c.label,
     labelEn: (c as any).label_en || match?.labelEn || CATEGORY_EN_MAP[c.slug] || CATEGORY_EN_MAP[c.label] || c.label,
     icon: c.icon,
     image: c.image_url ?? match?.image ?? "",
+    image_url: c.image_url ?? undefined,
+    display_order: c.display_order,
     count: c.product_count,
   };
 }
@@ -133,35 +136,60 @@ export function useCategories() {
   const [data, setData] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchCategories = async () => {
     if (!isSupabaseConfigured) {
-      setData(staticCategories);
+      // Calculate dynamic counts from static products
+      const computed = staticCategories.map(c => ({
+        ...c,
+        count: staticProducts.filter(p => p.categorySlug === c.slug || p.category === c.label).length
+      }));
+      setData(computed);
       setLoading(false);
       return;
     }
 
-    async function fetchCategories() {
-      try {
-        const { data: rows, error: err } = await supabase!
-          .from("categories")
-          .select("*")
-          .order("display_order");
-        if (err || !rows || rows.length === 0) {
-          setData(staticCategories);
-        } else {
-          setData(rows.map(dbCategoryToCategory));
-        }
-      } catch {
-        setData(staticCategories);
-      } finally {
-        setLoading(false);
-      }
-    }
+    try {
+      const [catRes, prodRes] = await Promise.all([
+        supabase!.from("categories").select("*").order("display_order"),
+        supabase!.from("products").select("category_slug, category_label")
+      ]);
 
+      const rows = catRes.data;
+      const prods = prodRes.data || [];
+
+      if (catRes.error || !rows || rows.length === 0) {
+        const computed = staticCategories.map(c => ({
+          ...c,
+          count: staticProducts.filter(p => p.categorySlug === c.slug || p.category === c.label).length
+        }));
+        setData(computed);
+      } else {
+        const computed = rows.map(r => {
+          const cat = dbCategoryToCategory(r);
+          const actualCount = prods.filter(p => p.category_slug === cat.slug || p.category_label === cat.label).length;
+          return {
+            ...cat,
+            count: actualCount > 0 || r.product_count === 0 || r.product_count === null ? actualCount : r.product_count
+          };
+        });
+        setData(computed);
+      }
+    } catch {
+      const computed = staticCategories.map(c => ({
+        ...c,
+        count: staticProducts.filter(p => p.categorySlug === c.slug || p.category === c.label).length
+      }));
+      setData(computed);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchCategories();
   }, []);
 
-  return { data, loading };
+  return { data, loading, refetch: fetchCategories };
 }
 
 export async function submitOrder(orderData: {
