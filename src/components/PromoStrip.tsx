@@ -1,25 +1,70 @@
 import { useLocation } from "wouter";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 const P = "#2D5A27";
 
 export default function PromoStrip() {
   const [, navigate] = useLocation();
   const { isMobile, isTablet } = useResponsive();
-  const { t, lang } = useLanguage();
+  const { lang } = useLanguage();
+  const { getSetting } = useSiteSettings();
 
+  // Dynamic promo configuration from Admin Settings with elegant fallbacks
   const promos = [
-    { labelBn: "ফ্ল্যাশ ডিল", labelEn: "FLASH DEAL", tagBn: "৩০% ছাড়", tagEn: "30% OFF", tagColor: "#D64545", titleBn: "সুন্দরবনের মধু", titleEn: "Sundarbans Wild Honey", subBn: "সীমিত স্টক · আজ রাতেই শেষ", subEn: "Limited stock · Ends tonight", icon: "hive", bg: "linear-gradient(135deg, #FFF7ED 0%, #FEE2A0 100%)", border: "#F59E0B30", slug: "honey" },
-    { labelBn: "নতুন পণ্য", labelEn: "NEW ARRIVAL", tagBn: "তাজা", tagEn: "FRESH", tagColor: P, titleBn: "সিলেটের সবুজ চা", titleEn: "Sylhet Green Tea", subBn: "প্রথম বসন্তের ফসল", subEn: "First flush spring harvest", icon: "local_cafe", bg: "linear-gradient(135deg, #F0FDF4 0%, #D1FAE5 100%)", border: "#2D5A2730", slug: "tea-coffee" },
-    { labelBn: "সেরা বিক্রয়", labelEn: "BEST SELLER", tagBn: "#১", tagEn: "#1", tagColor: "#7C3AED", titleBn: "রাজশাহীর সরিষার তেল", titleEn: "Rajshahi Mustard Oil", subBn: "ঠান্ডা চাপা, পাথর ভাঙা", subEn: "Cold-pressed stone mill", icon: "oil_barrel", bg: "linear-gradient(135deg, #FAF5FF 0%, #EDE9FE 100%)", border: "#7C3AED30", slug: "grocery" },
+    {
+      labelBn: getSetting("promo_card1_label_bn", "ফ্ল্যাশ ডিল"),
+      labelEn: getSetting("promo_card1_label_en", "FLASH DEAL"),
+      tagBn: getSetting("promo_card1_tag_bn", "৩০% ছাড়"),
+      tagEn: getSetting("promo_card1_tag_en", "30% OFF"),
+      tagColor: getSetting("promo_card1_color", "#D64545"),
+      titleBn: getSetting("promo_card1_title_bn", "সুন্দরবনের মধু"),
+      titleEn: getSetting("promo_card1_title_en", "Sundarbans Wild Honey"),
+      subBn: getSetting("promo_card1_sub_bn", "সীমিত স্টক · আজ রাতেই শেষ"),
+      subEn: getSetting("promo_card1_sub_en", "Limited stock · Ends tonight"),
+      icon: getSetting("promo_card1_icon", "hive"),
+      bg: "linear-gradient(135deg, #FFF7ED 0%, #FEE2A0 100%)",
+      border: "#F59E0B30",
+      slug: getSetting("promo_card1_slug", "honey"),
+    },
+    {
+      labelBn: getSetting("promo_card2_label_bn", "নতুন পণ্য"),
+      labelEn: getSetting("promo_card2_label_en", "NEW ARRIVAL"),
+      tagBn: getSetting("promo_card2_tag_bn", "তাজা"),
+      tagEn: getSetting("promo_card2_tag_en", "FRESH"),
+      tagColor: getSetting("promo_card2_color", P),
+      titleBn: getSetting("promo_card2_title_bn", "সিলেটের সবুজ চা"),
+      titleEn: getSetting("promo_card2_title_en", "Sylhet Green Tea"),
+      subBn: getSetting("promo_card2_sub_bn", "প্রথম বসন্তের ফসল"),
+      subEn: getSetting("promo_card2_sub_en", "First flush spring harvest"),
+      icon: getSetting("promo_card2_icon", "local_cafe"),
+      bg: "linear-gradient(135deg, #F0FDF4 0%, #D1FAE5 100%)",
+      border: "#2D5A2730",
+      slug: getSetting("promo_card2_slug", "tea-coffee"),
+    },
+    {
+      labelBn: getSetting("promo_card3_label_bn", "সেরা বিক্রয়"),
+      labelEn: getSetting("promo_card3_label_en", "BEST SELLER"),
+      tagBn: getSetting("promo_card3_tag_bn", "#১"),
+      tagEn: getSetting("promo_card3_tag_en", "#1"),
+      tagColor: getSetting("promo_card3_color", "#7C3AED"),
+      titleBn: getSetting("promo_card3_title_bn", "রাজশাহীর সরিষার তেল"),
+      titleEn: getSetting("promo_card3_title_en", "Rajshahi Mustard Oil"),
+      subBn: getSetting("promo_card3_sub_bn", "ঠান্ডা চাপা, পাথর ভাঙা"),
+      subEn: getSetting("promo_card3_sub_en", "Cold-pressed stone mill"),
+      icon: getSetting("promo_card3_icon", "oil_barrel"),
+      bg: "linear-gradient(135deg, #FAF5FF 0%, #EDE9FE 100%)",
+      border: "#7C3AED30",
+      slug: getSetting("promo_card3_slug", "grocery"),
+    },
   ];
 
   return (
     <section style={{ marginTop: isMobile ? 32 : 80 }}>
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(3,1fr)", gap: isMobile ? 10 : 20 }}>
-        {promos.map((p) => (
-          <PromoCard key={p.slug} promo={p} onClick={() => navigate(`/category/${p.slug}`)} compact={isMobile} lang={lang} />
+        {promos.map((p, idx) => (
+          <PromoCard key={idx} promo={p} onClick={() => navigate(`/category/${p.slug}`)} compact={isMobile} lang={lang} />
         ))}
       </div>
     </section>

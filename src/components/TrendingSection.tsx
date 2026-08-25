@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { products, getProductName, getProductWeight, type Product } from "@/data/products";
+import { products as staticProducts, getProductName, getProductWeight, type Product } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
+import { useProducts } from "@/lib/supabase-hooks";
 
 const P = "#2D5A27";
 
@@ -17,16 +19,93 @@ export default function TrendingSection() {
   const [activeTab, setActiveTab] = useState<string>("top-sellers");
   const { isMobile, isTablet } = useResponsive();
   const { t, lang, formatPrice, formatNum } = useLanguage();
+  const { getSetting } = useSiteSettings();
+  const { data: dbProducts } = useProducts();
+
+  const allProducts = dbProducts && dbProducts.length > 0 ? dbProducts : staticProducts;
+  const trendingMode = getSetting("trending_mode", "auto");
+
+  // Function to resolve products dynamically based on manual selection or automatic algorithms
+  function resolveTabProducts(tabId: string): Product[] {
+    if (trendingMode === "manual") {
+      let key = "trending_top_sellers_slugs";
+      if (tabId === "featured") key = "trending_featured_slugs";
+      if (tabId === "promotions") key = "trending_deals_slugs";
+
+      try {
+        const raw = getSetting(key, "");
+        if (raw) {
+          const slugs: string[] = JSON.parse(raw);
+          if (Array.isArray(slugs) && slugs.length > 0) {
+            const manualList = slugs
+              .map((slug) => allProducts.find((p) => p.slug === slug))
+              .filter(Boolean) as Product[];
+            if (manualList.length > 0) {
+              return manualList;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Could not parse manual trending slugs:", e);
+      }
+    }
+
+    // Default algorithmic sorting
+    if (tabId === "top-sellers") {
+      return [...allProducts].sort((a, b) => b.reviews - a.reviews);
+    }
+    if (tabId === "featured") {
+      const order = ["সেরা বিক্রয়", "প্রিমিয়াম", "ঐতিহ্যবাহী", "অর্গানিক", "স্বাস্থ্যকর", "পুরাতন"];
+      return [...allProducts].sort((a, b) => {
+        const diff = (order.indexOf(a.badge ?? "") - order.indexOf(b.badge ?? ""));
+        return diff !== 0 ? diff : b.rating - a.rating;
+      });
+    }
+    if (tabId === "promotions") {
+      return [...allProducts]
+        .filter((p) => p.originalPrice)
+        .sort((a, b) => (b.originalPrice! - b.price) - (a.originalPrice! - a.price))
+        .concat(allProducts.filter((p) => !p.originalPrice));
+    }
+    return allProducts;
+  }
 
   const TABS = [
-    { id: "top-sellers", icon: "local_fire_department", label: t("সেরা বিক্রয়", "Top Sellers"), accent: "#E63946", accentBg: "#FEF2F2", badge: t("হট", "HOT"), description: t("এই সপ্তাহে সবচেয়ে বেশি কেনা", "Most purchased this week"), sort: () => [...products].sort((a, b) => b.reviews - a.reviews) },
-    { id: "featured", icon: "workspace_premium", label: t("বিশেষ পছন্দ", "Featured"), accent: "#D97706", accentBg: "#FFFBEB", badge: t("পিক", "PICK"), description: t("বিশেষভাবে বাছাই করা পণ্য", "Hand-picked organic essentials"), sort: () => [...products].sort((a, b) => { const order = ["সেরা বিক্রয়", "প্রিমিয়াম", "ঐতিহ্যবাহী", "অর্গানিক", "স্বাস্থ্যকর", "পুরাতন"]; return (order.indexOf(a.badge ?? "") - order.indexOf(b.badge ?? "")) || b.rating - a.rating; }) },
-    { id: "promotions", icon: "sell", label: t("অফার", "Deals"), accent: "#7C3AED", accentBg: "#F5F3FF", badge: t("সেল", "SALE"), description: t("এখনকার সেরা অফার", "Best discounts & special offers"), sort: () => [...products].filter((p) => p.originalPrice).sort((a, b) => (b.originalPrice! - b.price) - (a.originalPrice! - a.price)).concat(products.filter((p) => !p.originalPrice)) },
+    { 
+      id: "top-sellers", 
+      icon: "local_fire_department", 
+      label: t("সেরা বিক্রয়", "Top Sellers"), 
+      accent: "#E63946", 
+      accentBg: "#FEF2F2", 
+      badge: t("হট", "HOT"), 
+      description: trendingMode === "manual" ? t("অ্যাডমিন দ্বারা নির্বাচিত শীর্ষ পণ্যসমূহ", "Hand-selected best selling organic favorites") : t("এই সপ্তাহে সবচেয়ে বেশি কেনা", "Most purchased this week"), 
+      getProducts: () => resolveTabProducts("top-sellers") 
+    },
+    { 
+      id: "featured", 
+      icon: "workspace_premium", 
+      label: t("বিশেষ পছন্দ", "Featured"), 
+      accent: "#D97706", 
+      accentBg: "#FFFBEB", 
+      badge: t("পিক", "PICK"), 
+      description: trendingMode === "manual" ? t("অ্যাডমিন দ্বারা নির্বাচিত বিশেষ আইটেম", "Specially curated editorial & premium favorites") : t("বিশেষভাবে বাছাই করা পণ্য", "Hand-picked organic essentials"), 
+      getProducts: () => resolveTabProducts("featured") 
+    },
+    { 
+      id: "promotions", 
+      icon: "sell", 
+      label: t("অফার", "Deals"), 
+      accent: "#7C3AED", 
+      accentBg: "#F5F3FF", 
+      badge: t("সেল", "SALE"), 
+      description: trendingMode === "manual" ? t("অ্যাডমিন দ্বারা নির্বাচিত সেরা অফারসমূহ", "Specially selected discounts & promotional items") : t("এখনকার সেরা অফার", "Best discounts & special offers"), 
+      getProducts: () => resolveTabProducts("promotions") 
+    },
   ];
 
   const tab = TABS.find((t) => t.id === activeTab)!;
-  const ranked = tab.sort().slice(0, 6);
-  const top = ranked[0];
+  const ranked = tab.getProducts().slice(0, 6);
+  const top = ranked[0] || allProducts[0];
   const rest = ranked.slice(1, isMobile ? 4 : 6);
 
   return (

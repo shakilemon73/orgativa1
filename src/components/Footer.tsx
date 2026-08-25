@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import Logo from "@/components/Logo";
 import { 
   ShieldCheck, 
@@ -95,7 +96,27 @@ export default function Footer() {
   const [subscribed, setSubscribed] = useState(false);
   const { isMobile, isTablet } = useResponsive();
   const { lang, t } = useLanguage();
+  const { getSetting } = useSiteSettings();
   const px = isMobile ? "16px" : isTablet ? "24px" : "48px";
+
+  const footerDesc = getSetting("footer_about_text", getSetting("footer_description", "Orgativa is Bangladesh's premier organic food brand dedicated to reviving pure, unadulterated nature. Sourced directly from certified eco-farms across Bangladesh and laboratory tested for utmost purity."));
+  const contactAddress = getSetting("footer_hq_address", getSetting("contact_address", "House 12, Road 5, Block D, Bashundhara R/A, Dhaka-1229, Bangladesh"));
+  const contactPhone = getSetting("footer_hotline_number", getSetting("contact_phone", "+880 1700-000000"));
+  const contactHours = getSetting("footer_hotline_hours", "9:00 AM – 10:00 PM (Everyday)");
+  const supportEmail = getSetting("footer_support_email", getSetting("contact_email", "support@orgativa.com.bd"));
+  const corpEmail = getSetting("footer_corp_email", "corporate@orgativa.com.bd");
+  const contactWhatsapp = getSetting("contact_whatsapp", "+8801700000000");
+
+  const facebookUrl = getSetting("footer_social_facebook", getSetting("facebook_page_url", "https://facebook.com"));
+  const instagramUrl = getSetting("footer_social_instagram", getSetting("instagram_page_url", "https://instagram.com"));
+  const youtubeUrl = getSetting("footer_social_youtube", "https://youtube.com");
+  const linkedinUrl = getSetting("footer_social_linkedin", "https://linkedin.com");
+  const tiktokUrl = getSetting("footer_social_tiktok", "https://tiktok.com");
+
+  const appStoreUrl = getSetting("footer_appstore_url", getSetting("app_store_url", "https://apple.com/app-store"));
+  const playStoreUrl = getSetting("footer_playstore_url", getSetting("play_store_url", "https://play.google.com/store"));
+  const copyrightText = getSetting("footer_copyright_text", getSetting("copyright_text", "© 2026 Orgativa Bangladesh Ltd. All rights reserved."));
+  const deliveryNote = getSetting("footer_delivery_note", "Delivering nationwide across all 64 districts in Bangladesh with 100% damage protection guarantee.");
 
   const shopLinks = [
     { labelBn: "মুদিখানা", labelEn: "Grocery", slug: "grocery" },
@@ -214,26 +235,26 @@ export default function Footer() {
               <Logo size={40} variant="dark" />
             </a>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", fontFamily: "'Inter',sans-serif", lineHeight: 1.7, margin: "0 0 20px", maxWidth: isMobile ? "100%" : 280 }}>
-              {t("বাংলাদেশের বিশ্বস্ত অর্গানিক মুদিখানা ও স্বাস্থ্য পণ্যের উৎস — খামার থেকে আপনার দোরগোড়ায়।", "Bangladesh's trusted source for organic groceries & wellness products — direct from farms to your doorstep.")}
+              {footerDesc}
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
               {[
-                { icon: MapPin, text: t("বাড়ি ১২, রোড ৫, বসুন্ধরা আ/এ, ঢাকা-১২২৯", "House 12, Road 5, Bashundhara R/A, Dhaka-1229") },
-                { icon: Phone, text: "+880 1700-000000" },
-                { icon: Mail, text: "hello@orgativa.com.bd" },
+                { icon: MapPin, text: contactAddress },
+                { icon: Phone, text: `${contactPhone} (${contactHours})` },
+                { icon: Mail, text: `${supportEmail} / ${corpEmail}` },
               ].map(({ icon: Icon, text }, i) => (
                 <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                   <Icon size={14} className="text-[#6daf67]" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>{text}</span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>{text}</span>
                 </div>
               ))}
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {[
-                { icon: Globe, label: t("ওয়েবসাইট", "Website"), href: "#" },
-                { icon: Mail, label: t("ইমেইল", "Email"), href: "mailto:hello@orgativa.com.bd" },
-                { icon: Phone, label: t("ফোন", "Phone"), href: "tel:+8801700000000" },
-                { icon: MessageSquare, label: t("হোয়াটসঅ্যাপ", "WhatsApp"), href: "https://wa.me/8801700000000" },
+                { icon: Globe, label: t("ওয়েবসাইট", "Website"), href: "/" },
+                { icon: Mail, label: t("ইমেইল", "Email"), href: `mailto:${supportEmail}` },
+                { icon: Phone, label: t("ফোন", "Phone"), href: `tel:${contactPhone.replace(/\s+/g, '')}` },
+                { icon: MessageSquare, label: t("হোয়াটসঅ্যাপ", "WhatsApp"), href: contactWhatsapp.startsWith("http") ? contactWhatsapp : `https://wa.me/${contactWhatsapp.replace(/[^0-9]/g, '')}` },
               ].map(({ icon: Icon, label, href }) => (
                 <SocialBtn key={label} icon={Icon} label={label} href={href} />
               ))}
@@ -266,16 +287,16 @@ export default function Footer() {
                   {t("অ্যাপ ডাউনলোড", "DOWNLOAD APP")}
                 </p>
                 {[
-                  { label: t("অ্যাপ স্টোর", "App Store"), subtitle: t("ডাউনলোড করুন", "Download on"), icon: AppleStoreIcon },
-                  { label: t("গুগল প্লে", "Google Play"), subtitle: t("গেট ইট অন", "GET IT ON"), icon: PlayStoreIcon }
-                ].map(({ label, subtitle, icon: Icon }) => (
-                  <button key={label} style={{ display: "flex", alignItems: "center", gap: 10, backgroundColor: "#000", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", width: "100%", textAlign: "left" }}>
+                  { label: t("অ্যাপ স্টোর", "App Store"), subtitle: t("ডাউনলোড করুন", "Download on"), icon: AppleStoreIcon, href: appStoreUrl },
+                  { label: t("গুগল প্লে", "Google Play"), subtitle: t("গেট ইট অন", "GET IT ON"), icon: PlayStoreIcon, href: playStoreUrl }
+                ].map(({ label, subtitle, icon: Icon, href }) => (
+                  <a key={label} href={href || "#"} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, backgroundColor: "#000", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", width: "100%", textAlign: "left", textDecoration: "none" }}>
                     <Icon size={20} />
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       <span style={{ fontSize: 8, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", fontFamily: "'Inter',sans-serif", letterSpacing: "0.05em", lineHeight: 1 }}>{subtitle}</span>
                       <span style={{ fontSize: 13, color: "#fff", fontFamily: "'Inter',sans-serif", fontWeight: 700, lineHeight: 1.2 }}>{label}</span>
                     </div>
-                  </button>
+                  </a>
                 ))}
               </div>
             </div>
@@ -285,13 +306,21 @@ export default function Footer() {
 
       {/* Bottom bar */}
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", position: "relative", zIndex: 2 }}>
+        {deliveryNote && (
+          <div style={{ maxWidth: 1280, margin: "0 auto", padding: `12px ${px} 0`, borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+            <p style={{ fontSize: 11, color: "#8FA888", fontFamily: "'Inter',sans-serif", margin: 0, paddingBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>🚚</span>
+              <span>{deliveryNote}</span>
+            </p>
+          </div>
+        )}
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: `18px ${px}`, display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? 14 : 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 12 : 20, flexWrap: "wrap" }}>
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", fontFamily: "'Inter',sans-serif", margin: 0 }}>
-              {t("© ২০২৪ Orgativa। সর্বস্বত্ব সংরক্ষিত।", "© 2024 Orgativa. All rights reserved.")}
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: "'Inter',sans-serif", margin: 0 }}>
+              {copyrightText}
             </p>
             {[t("গোপনীয়তা নীতি", "Privacy Policy"), t("সেবার শর্তাবলী", "Terms of Service")].map((itemText) => (
-              <a key={itemText} href="#" style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", fontFamily: "'Inter',sans-serif", textDecoration: "none" }}>{itemText}</a>
+              <a key={itemText} href="#" style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontFamily: "'Inter',sans-serif", textDecoration: "none" }}>{itemText}</a>
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

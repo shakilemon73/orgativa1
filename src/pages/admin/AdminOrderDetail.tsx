@@ -22,7 +22,9 @@ import {
   ShieldCheck,
   AlertCircle,
   ShoppingBag,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 
 const P = "#2D5A27";
@@ -82,6 +84,8 @@ export default function AdminOrderDetail() {
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const STATUS_LABELS: Record<OrderStatus, { label: string; bg: string; color: string; icon: any }> = {
     pending:    { label: "Pending",     bg: "#FFFBEB", color: "#B45309", icon: Clock },
@@ -171,6 +175,29 @@ export default function AdminOrderDetail() {
     setUpdatingStatus(false);
   }
 
+  async function handleDeleteThisOrder() {
+    setIsDeleting(true);
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || "");
+      if (supabase && isUuid) {
+        // 1. Delete associated order items
+        await supabase.from("order_items").delete().eq("order_id", id);
+        // 2. Delete the order record
+        const { error } = await supabase.from("orders").delete().eq("id", id);
+        if (error) throw new Error(error.message);
+      }
+      showToast(`Order #${order?.order_number} was permanently deleted.`);
+      setTimeout(() => {
+        navigate("/admin/orders");
+      }, 500);
+    } catch (err: any) {
+      console.error("Failed to delete order:", err);
+      showToast(`Failed to delete order: ${err?.message || "Please try again"}`);
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  }
+
   if (loading) {
     return (
       <AdminLayout title="Loading Transaction Details">
@@ -234,28 +261,54 @@ export default function AdminOrderDetail() {
 
       <div style={{ maxWidth: 1200, margin: "0 auto", paddingBottom: 48 }}>
         
-        {/* Navigation back */}
-        <button onClick={() => navigate("/admin/orders")}
-          style={{ 
-            display: "inline-flex", 
-            alignItems: "center", 
-            gap: 8, 
-            background: "none", 
-            border: "none", 
-            cursor: "pointer", 
-            color: P, 
-            fontSize: 13, 
-            fontFamily: "'Inter',sans-serif", 
-            marginBottom: 24, 
-            fontWeight: 700,
-            transition: "all 0.2s" 
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = P_DARK; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = P; }}
-        >
-          <ArrowLeft size={16} />
-          Back to Orders Registry
-        </button>
+        {/* Navigation & Actions Top Bar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+          <button onClick={() => navigate("/admin/orders")}
+            style={{ 
+              display: "inline-flex", 
+              alignItems: "center", 
+              gap: 8, 
+              background: "none", 
+              border: "none", 
+              cursor: "pointer", 
+              color: P, 
+              fontSize: 13, 
+              fontFamily: "'Inter',sans-serif", 
+              fontWeight: 700,
+              transition: "all 0.2s" 
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = P_DARK; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = P; }}
+          >
+            <ArrowLeft size={16} />
+            Back to Orders Registry
+          </button>
+
+          {/* Delete Order Button */}
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            style={{
+              backgroundColor: "#FEF2F2",
+              color: "#DC2626",
+              border: "1px solid #FECACA",
+              borderRadius: 10,
+              padding: "8px 16px",
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: "'Inter',sans-serif",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              transition: "all 0.15s"
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#FEE2E2"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#FEF2F2"; }}
+          >
+            <Trash2 size={14} />
+            <span>Delete This Order</span>
+          </button>
+        </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 28 }}>
 
@@ -575,6 +628,130 @@ export default function AdminOrderDetail() {
 
         </div>
       </div>
+
+      {/* DELETE ORDER CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 20,
+          zIndex: 10000,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            backgroundColor: "#fff",
+            borderRadius: 20,
+            maxWidth: 460,
+            width: "100%",
+            padding: 28,
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            border: "1px solid #E5E7EB",
+            animation: "fadeIn 0.15s ease-out"
+          }}>
+            <div style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              backgroundColor: "#FEF2F2",
+              color: "#DC2626",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px"
+            }}>
+              <AlertTriangle size={26} />
+            </div>
+
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111827", textAlign: "center", margin: "0 0 8px", fontFamily: "'Inter',sans-serif" }}>
+              Delete Order #{order.order_number}?
+            </h3>
+
+            <p style={{ fontSize: 13, color: "#4B5563", textAlign: "center", lineHeight: 1.5, margin: "0 0 20px", fontFamily: "'Inter',sans-serif" }}>
+              This will permanently delete this order and all {items.length} line item(s) from the database. <strong>This action is irreversible.</strong>
+            </p>
+
+            {/* Order summary mini card */}
+            <div style={{
+              backgroundColor: "#F9FAFB",
+              borderRadius: 12,
+              padding: "12px 16px",
+              border: "1px solid #E5E7EB",
+              marginBottom: 24,
+              fontSize: 12,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B7280" }}>Customer:</span>
+                <span style={{ fontWeight: 700, color: "#111827" }}>{order.customer_name}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B7280" }}>Phone:</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>{order.phone}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B7280" }}>Total Amount:</span>
+                <span style={{ fontWeight: 800, color: P }}>{formatPrice(order.total)}</span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowDeleteModal(false)}
+                style={{
+                  flex: 1,
+                  padding: "11px 0",
+                  backgroundColor: "#F3F4F6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  fontFamily: "'Inter',sans-serif"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteThisOrder}
+                style={{
+                  flex: 1,
+                  padding: "11px 0",
+                  backgroundColor: "#DC2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  fontFamily: "'Inter',sans-serif",
+                  boxShadow: "0 4px 12px rgba(220,38,38,0.2)"
+                }}
+              >
+                {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                <span>{isDeleting ? "Deleting..." : "Permanently Delete"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes pulse {

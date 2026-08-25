@@ -2,21 +2,55 @@ import { useLocation } from "wouter";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
+import { useProducts } from "@/lib/supabase-hooks";
+import { getProductName, getProductWeight, getProductBadge, type Product } from "@/data/products";
 
 const P = "#2D5A27";
 
-const heroProducts = [
-  { nameBn: "বন্য বনের মধু", nameEn: "Wild Forest Honey", priceBn: "৳২,৪০০", priceEn: "৳2,400", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBq58vEH7gYivPXEcLtToX4pCgGkviWmugMHiaigVEtrhNKVWTb4fTxR1hT32LDpNdlSJzxRskyCEBJLI9quHz9O_6QJVWrn2OIY0kpmCMFk7aQwMx5LqiF6lunsosrCjrayF1NNm2DDGr068cYTrgWBexlw0yOmDhPOzDAp1MypmTUW6y9JGsEHMxMHefsdhAn4UsSDMBRDY5ICzk37jUhLrIrO4ZkFiI3ZE-r9CNn86Gtqi1oO6X-niuYbLh0cNTrJ99yBDhQFyb7", badgeBn: "সেরা বিক্রয়", badgeEn: "Best Seller" },
-  { nameBn: "প্রিমিয়াম পেস্তা", nameEn: "Premium Pistachios", priceBn: "৳৩,২০০", priceEn: "৳3,200", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAV_9aStLOUy3wxdgtym2iJwX-mmsl6jPJD6ecTZT3ziz2Tj-7pVXrqDCQtEOQ1kzc5XZ9Y9EX1rThCwppLb5Ba6F1-DP_5Gj-P6rlShkJGl9-jVC03jtFGxY5OQAGu5T5uN8a7exjnEslKqzIgo2XojJ3Sut175FRnz4WnEjtZRYIDTFSiYFVbuvsJ9GqCw4_PbgqjDXCx8QA7F61_Axk_Oki0NTEjqUGDoqK2smHnSmqtEy_xZKZrNfTpDdaKzmjBG3-bkpQClACP", badgeBn: "প্রিমিয়াম", badgeEn: "Premium" },
-  { nameBn: "ঠান্ডা চাপা তেল", nameEn: "Cold-Pressed Oil", priceBn: "৳১,৮৫০", priceEn: "৳1,850", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuA5GzOFWh1pgalQi48-L6jXrnrBdcvDxK-Gb2S8CCtBZFhvlX6tSY2Kz_j7uleHESVRHEh2qnBrg-_pdX-Ks_uVdKF5QPfZpif5WE-0yV3F0MmXlPDL9MqfTONTNjX7iazXEden3BKL14y5eckX2gd8w4dug-rDpGiPJIq0JpnVgtv8zQNZ2mKOn1kg3Iisw4JEuaZNxS0M2pjAGoHHG_zXdz9MCZGlp3pmHyrpaZ0fMr2frPb0LRDYEWVdycoyfZpBlnXXx4gm11UX", badgeBn: "অর্গানিক", badgeEn: "Organic" },
-  { nameBn: "হাতে তৈরি ঘি", nameEn: "Hand-Churned Ghee", priceBn: "৳২,৮০০", priceEn: "৳2,800", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuANdJPuajyHXCp7iaCYfSFlXnopP1beP-KgAbmdmX1lt5SMH_C3_9CLD2By3zJ9krkw5PF9Lml-mSOEcTLSfbSkb3Qf5-BiRlT8A_QYfY28tect19CUj5EWHG5_LMQXowf87L424S9yL1awzpv4dLpT9PrXFkcJypZtLB0Zp5E3ovtK7vzAHW5AcmfLKILDwZsvVPYSXiuRO1Yn4MUTCCmm7gzOYg-sd9yHviieYhyrn2p93b--_W8qcR-J1-6HWrVbTZqUfedVRsuE", badgeBn: "ঐতিহ্যবাহী", badgeEn: "Artisanal" },
+const DEFAULT_HERO_PRODUCTS = [
+  { nameBn: "বন্য বনের মধু", nameEn: "Wild Forest Honey", priceBn: "৳২,৪০০", priceEn: "৳2,400", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBq58vEH7gYivPXEcLtToX4pCgGkviWmugMHiaigVEtrhNKVWTb4fTxR1hT32LDpNdlSJzxRskyCEBJLI9quHz9O_6QJVWrn2OIY0kpmCMFk7aQwMx5LqiF6lunsosrCjrayF1NNm2DDGr068cYTrgWBexlw0yOmDhPOzDAp1MypmTUW6y9JGsEHMxMHefsdhAn4UsSDMBRDY5ICzk37jUhLrIrO4ZkFiI3ZE-r9CNn86Gtqi1oO6X-niuYbLh0cNTrJ99yBDhQFyb7", badgeBn: "সেরা বিক্রয়", badgeEn: "Best Seller", slug: "wild-forest-honey" },
+  { nameBn: "প্রিমিয়াম পেস্তা", nameEn: "Premium Pistachios", priceBn: "৳৩,২০০", priceEn: "৳3,200", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAV_9aStLOUy3wxdgtym2iJwX-mmsl6jPJD6ecTZT3ziz2Tj-7pVXrqDCQtEOQ1kzc5XZ9Y9EX1rThCwppLb5Ba6F1-DP_5Gj-P6rlShkJGl9-jVC03jtFGxY5OQAGu5T5uN8a7exjnEslKqzIgo2XojJ3Sut175FRnz4WnEjtZRYIDTFSiYFVbuvsJ9GqCw4_PbgqjDXCx8QA7F61_Axk_Oki0NTEjqUGDoqK2smHnSmqtEy_xZKZrNfTpDdaKzmjBG3-bkpQClACP", badgeBn: "প্রিমিয়াম", badgeEn: "Premium", slug: "premium-pistachios" },
+  { nameBn: "ঠান্ডা চাপা তেল", nameEn: "Cold-Pressed Oil", priceBn: "৳১,৮৫০", priceEn: "৳1,850", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuA5GzOFWh1pgalQi48-L6jXrnrBdcvDxK-Gb2S8CCtBZFhvlX6tSY2Kz_j7uleHESVRHEh2qnBrg-_pdX-Ks_uVdKF5QPfZpif5WE-0yV3F0MmXlPDL9MqfTONTNjX7iazXEden3BKL14y5eckX2gd8w4dug-rDpGiPJIq0JpnVgtv8zQNZ2mKOn1kg3Iisw4JEuaZNxS0M2pjAGoHHG_zXdz9MCZGlp3pmHyrpaZ0fMr2frPb0LRDYEWVdycoyfZpBlnXXx4gm11UX", badgeBn: "অর্গানিক", badgeEn: "Organic", slug: "cold-pressed-oil" },
+  { nameBn: "হাতে তৈরি ঘি", nameEn: "Hand-Churned Ghee", priceBn: "৳২,৮০০", priceEn: "৳2,800", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuANdJPuajyHXCp7iaCYfSFlXnopP1beP-KgAbmdmX1lt5SMH_C3_9CLD2By3zJ9krkw5PF9Lml-mSOEcTLSfbSkb3Qf5-BiRlT8A_QYfY28tect19CUj5EWHG5_LMQXowf87L424S9yL1awzpv4dLpT9PrXFkcJypZtLB0Zp5E3ovtK7vzAHW5AcmfLKILDwZsvVPYSXiuRO1Yn4MUTCCmm7gzOYg-sd9yHviieYhyrn2p93b--_W8qcR-J1-6HWrVbTZqUfedVRsuE", badgeBn: "ঐতিহ্যবাহী", badgeEn: "Artisanal", slug: "hand-churned-ghee" },
 ];
 
 export default function Hero() {
   const [, navigate] = useLocation();
   const { isMobile, isTablet, width } = useResponsive();
-  const { lang, t } = useLanguage();
+  const { lang, t, formatPrice } = useLanguage();
   const { getSetting } = useSiteSettings();
+  const { data: allProducts } = useProducts();
+
+  // Resolve dynamic top 4 products from admin settings
+  let resolvedHeroProducts = DEFAULT_HERO_PRODUCTS;
+  try {
+    const rawSlugs = getSetting("hero_product_slugs", "");
+    if (rawSlugs && allProducts.length > 0) {
+      const parsedSlugs: string[] = JSON.parse(rawSlugs);
+      if (Array.isArray(parsedSlugs) && parsedSlugs.length > 0) {
+        const found = parsedSlugs
+          .map((slug) => allProducts.find((p) => p.slug === slug))
+          .filter(Boolean) as Product[];
+        
+        if (found.length > 0) {
+          resolvedHeroProducts = found.slice(0, 4).map((p) => ({
+            nameBn: p.name,
+            nameEn: p.nameEn || p.name,
+            priceBn: formatPrice(p.price),
+            priceEn: `৳${p.price.toLocaleString("en-US")}`,
+            image: p.image,
+            badgeBn: p.badge || "অর্গানিক",
+            badgeEn: p.badgeEn || p.badge || "Organic",
+            slug: p.slug,
+          }));
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Could not parse hero_product_slugs:", e);
+  }
+
+  const heroProducts = resolvedHeroProducts;
 
   if (isMobile) {
     const statGap = width < 365 ? 10 : 20;
@@ -87,7 +121,7 @@ export default function Hero() {
         {/* Product tiles 2×2 on mobile */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 20px 24px", position: "relative", zIndex: 2 }}>
           {heroProducts.map((p, i) => (
-            <ProductTile key={i} product={p} onClick={() => navigate("/category/all")} compact lang={lang} />
+            <ProductTile key={i} product={p} onClick={() => navigate(p.slug ? `/products/${p.slug}` : "/category/all")} compact lang={lang} />
           ))}
         </div>
 
@@ -185,10 +219,10 @@ export default function Hero() {
           <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 440, height: 440, borderRadius: "50%", background: "radial-gradient(circle, #E8F5E3 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 28 }}>
-              {heroProducts.slice(0, 2).map((p, i) => <ProductTile key={i} product={p} onClick={() => navigate("/category/all")} lang={lang} />)}
+              {heroProducts.slice(0, 2).map((p, i) => <ProductTile key={i} product={p} onClick={() => navigate(p.slug ? `/products/${p.slug}` : "/category/all")} lang={lang} />)}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingBottom: 28 }}>
-              {heroProducts.slice(2, 4).map((p, i) => <ProductTile key={i} product={p} onClick={() => navigate("/category/all")} lang={lang} />)}
+              {heroProducts.slice(2, 4).map((p, i) => <ProductTile key={i} product={p} onClick={() => navigate(p.slug ? `/products/${p.slug}` : "/category/all")} lang={lang} />)}
             </div>
           </div>
           <div style={{ position: "absolute", bottom: 44, left: "50%", transform: "translateX(-50%)", backgroundColor: "#fff", borderRadius: 14, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 32px rgba(45,90,39,0.15)", border: "1px solid #E8F0E5", whiteSpace: "nowrap", zIndex: 10 }}>
@@ -228,7 +262,7 @@ export default function Hero() {
   );
 }
 
-function ProductTile({ product, onClick, compact, lang }: { product: typeof heroProducts[0]; onClick: () => void; compact?: boolean; lang: "bn" | "en" }) {
+function ProductTile({ product, onClick, compact, lang }: { product: typeof DEFAULT_HERO_PRODUCTS[0]; onClick: () => void; compact?: boolean; lang: "bn" | "en" }) {
   const name = lang === "en" ? product.nameEn : product.nameBn;
   const price = lang === "en" ? product.priceEn : product.priceBn;
   const badge = lang === "en" ? product.badgeEn : product.badgeBn;

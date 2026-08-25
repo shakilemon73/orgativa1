@@ -23,7 +23,10 @@ import {
   ExternalLink,
   DollarSign,
   MapPin,
-  Check
+  Check,
+  Trash2,
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
 
 const P = "#2D5A27";
@@ -52,6 +55,12 @@ export default function AdminOrders() {
   const [customEndDate, setCustomEndDate] = useState("");
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+
+  // Deletion & Selection state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteModalOrder, setDeleteModalOrder] = useState<DbOrder | null>(null);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const STATUS_LABELS: Record<OrderStatus, { label: string; bg: string; color: string; icon: any }> = {
     pending:    { label: "Pending",     bg: "#FFFBEB", color: "#B45309", icon: Clock },
@@ -156,6 +165,109 @@ export default function AdminOrders() {
     }
     setRawOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     showToast(`Order #${orderNumber} updated to ${STATUS_LABELS[newStatus].label}`);
+  }
+
+  // Handle single order permanent deletion
+  async function handleDeleteOrder(order: DbOrder) {
+    setIsDeleting(true);
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order.id);
+      if (supabase && isUuid) {
+        // 1. Delete associated order line items first to prevent FK constraint violations
+        const { error: itemsError } = await supabase
+          .from("order_items")
+          .delete()
+          .eq("order_id", order.id);
+        
+        if (itemsError) {
+          console.warn("Notice: order_items deletion encountered issue:", itemsError);
+        }
+
+        // 2. Delete the order record itself
+        const { error: orderError } = await supabase
+          .from("orders")
+          .delete()
+          .eq("id", order.id);
+
+        if (orderError) {
+          throw new Error(orderError.message);
+        }
+      }
+
+      // 3. Update local state
+      setRawOrders(prev => prev.filter(o => o.id !== order.id));
+      setSelectedIds(prev => prev.filter(id => id !== order.id));
+      setDeleteModalOrder(null);
+      showToast(`Order #${order.order_number} has been permanently deleted.`);
+    } catch (err: any) {
+      console.error("Order deletion failed:", err);
+      showToast(`Failed to delete order #${order.order_number}: ${err?.message || "Please try again."}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  // Handle bulk orders permanent deletion
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return;
+    setIsDeleting(true);
+    try {
+      if (supabase) {
+        const validUuids = selectedIds.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+        if (validUuids.length > 0) {
+          // 1. Delete all order items for selected orders
+          await supabase.from("order_items").delete().in("order_id", validUuids);
+          // 2. Delete the orders
+          const { error } = await supabase.from("orders").delete().in("id", validUuids);
+          if (error) throw new Error(error.message);
+        }
+      }
+
+      setRawOrders(prev => prev.filter(o => !selectedIds.includes(o.id)));
+      const count = selectedIds.length;
+      setSelectedIds([]);
+      setShowBulkDeleteModal(false);
+      showToast(`Successfully deleted ${count} order${count === 1 ? '' : 's'}.`);
+    } catch (err: any) {
+      console.error("Bulk deletion failed:", err);
+      showToast(`Failed to delete selected orders: ${err?.message || "Please try again."}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  // Handle bulk status change
+  async function handleBulkStatusChange(newStatus: OrderStatus) {
+    if (selectedIds.length === 0) return;
+    try {
+      if (supabase) {
+        const validUuids = selectedIds.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+        if (validUuids.length > 0) {
+          const { error } = await supabase
+            .from("orders")
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .in("id", validUuids);
+          if (error) throw new Error(error.message);
+        }
+      }
+
+      setRawOrders(prev => prev.map(o => selectedIds.includes(o.id) ? { ...o, status: newStatus } : o));
+      showToast(`Updated ${selectedIds.length} orders to ${STATUS_LABELS[newStatus].label}.`);
+    } catch (err: any) {
+      showToast(`Bulk status update failed: ${err?.message}`);
+    }
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.length === filtered.length && filtered.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filtered.map(o => o.id));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }
 
   useEffect(() => { 
@@ -523,6 +635,116 @@ export default function AdminOrders() {
 
         </div>
 
+        {/* BULK SELECTION ACTION BAR */}
+        {selectedIds.length > 0 && (
+          <div style={{
+            backgroundColor: "#1F2937",
+            color: "#fff",
+            borderRadius: 14,
+            padding: "14px 20px",
+            marginBottom: 20,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 14,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            animation: "fadeIn 0.2s ease-in-out"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{
+                backgroundColor: P,
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 800,
+                padding: "3px 10px",
+                borderRadius: 20
+              }}>
+                {selectedIds.length} Selected
+              </span>
+              <span style={{ fontSize: 13, color: "#E5E7EB", fontFamily: "'Inter',sans-serif" }}>
+                Selected orders can be modified or permanently deleted together
+              </span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {/* Quick Bulk Status */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 11, color: "#9CA3AF" }}>Set Status:</span>
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleBulkStatusChange(e.target.value as OrderStatus);
+                      e.target.value = "";
+                    }
+                  }}
+                  defaultValue=""
+                  style={{
+                    backgroundColor: "#374151",
+                    color: "#fff",
+                    border: "1px solid #4B5563",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                    fontSize: 12,
+                    fontFamily: "'Inter',sans-serif",
+                    fontWeight: 600,
+                    outline: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  <option value="" disabled>Choose Status...</option>
+                  <option value="pending">Pending</option>
+                  <option value="processing">Processing</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {/* Bulk Delete Button */}
+              <button
+                onClick={() => setShowBulkDeleteModal(true)}
+                style={{
+                  backgroundColor: "#DC2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "7px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  fontFamily: "'Inter',sans-serif",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  transition: "all 0.15s"
+                }}
+              >
+                <Trash2 size={13} />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </button>
+
+              {/* Deselect */}
+              <button
+                onClick={() => setSelectedIds([])}
+                style={{
+                  backgroundColor: "transparent",
+                  color: "#9CA3AF",
+                  border: "1px solid #4B5563",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: "'Inter',sans-serif",
+                  cursor: "pointer"
+                }}
+              >
+                Cancel Selection
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* MAIN ORDERS LISTING (DESKTOP TABLE + MOBILE CARDS) */}
         <div style={{ 
           backgroundColor: "#fff", 
@@ -534,9 +756,18 @@ export default function AdminOrders() {
           
           {/* DESKTOP TABLE VIEW */}
           <div className="admin-desktop-table" style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 850 }}>
               <thead>
                 <tr style={{ backgroundColor: "#FAFBF9", borderBottom: "1px solid #E6E8EC" }}>
+                  {/* Select All Checkbox */}
+                  <th style={{ width: 44, padding: "14px 16px", textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                      onChange={toggleSelectAll}
+                      style={{ cursor: "pointer", width: 16, height: 16, accentColor: P }}
+                    />
+                  </th>
                   {[
                     "Order Ref", 
                     "Customer Details", 
@@ -548,7 +779,7 @@ export default function AdminOrders() {
                     "Action"
                   ].map((h, idx) => (
                     <th key={idx} style={{ 
-                      padding: "14px 20px", 
+                      padding: "14px 16px", 
                       textAlign: h === "Action" ? "right" : "left", 
                       fontSize: 11, 
                       fontWeight: 700, 
@@ -565,8 +796,11 @@ export default function AdminOrders() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} style={{ borderBottom: "1px solid #F3F4F6" }}>
+                      <td style={{ padding: "16px", textAlign: "center" }}>
+                        <div style={{ height: 16, width: 16, backgroundColor: "#F3F4F6", borderRadius: 4, margin: "0 auto" }} />
+                      </td>
                       {Array.from({ length: 8 }).map((_, j) => (
-                        <td key={j} style={{ padding: "16px 20px" }}>
+                        <td key={j} style={{ padding: "16px" }}>
                           <div style={{ height: 14, backgroundColor: "#F3F4F6", borderRadius: 6, width: j === 0 ? 80 : "80%", animation: "pulse 1.5s infinite" }} />
                         </td>
                       ))}
@@ -574,25 +808,41 @@ export default function AdminOrders() {
                   ))
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: 48, textAlign: "center", color: "#6B7280", fontFamily: "'Inter',sans-serif" }}>
+                    <td colSpan={9} style={{ padding: 48, textAlign: "center", color: "#6B7280", fontFamily: "'Inter',sans-serif" }}>
                       No orders matched your current search filters.
                     </td>
                   </tr>
                 ) : filtered.map((order) => {
                   const st = STATUS_LABELS[order.status] ?? STATUS_LABELS.pending;
                   const payMeta = PAYMENT_LABELS[order.payment_method] ?? { label: order.payment_method, bg: "#F3F4F6", color: "#4B5563" };
+                  const isSelected = selectedIds.includes(order.id);
 
                   return (
                     <tr key={order.id} 
                       style={{ 
                         borderBottom: "1px solid #F3F4F6", 
+                        backgroundColor: isSelected ? "#F0FDF4" : undefined,
                         transition: "all 0.15s" 
                       }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = "#FAFBF9")}
-                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = "")}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) (e.currentTarget as HTMLElement).style.backgroundColor = "#FAFBF9";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) (e.currentTarget as HTMLElement).style.backgroundColor = "";
+                      }}
                     >
+                      {/* Row Checkbox */}
+                      <td style={{ padding: "16px", textAlign: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(order.id)}
+                          style={{ cursor: "pointer", width: 16, height: 16, accentColor: P }}
+                        />
+                      </td>
+
                       {/* Reference No */}
-                      <td style={{ padding: "16px 20px" }}>
+                      <td style={{ padding: "16px" }}>
                         <button 
                           onClick={() => navigate(`/admin/orders/${order.id}`)}
                           style={{
@@ -613,7 +863,7 @@ export default function AdminOrders() {
                       </td>
 
                       {/* Customer Details */}
-                      <td style={{ padding: "16px 20px" }}>
+                      <td style={{ padding: "16px" }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", fontFamily: "'Inter',sans-serif", wordBreak: "break-word" }}>
                             {order.customer_name}
@@ -625,7 +875,7 @@ export default function AdminOrders() {
                       </td>
 
                       {/* Location */}
-                      <td style={{ padding: "16px 20px" }}>
+                      <td style={{ padding: "16px" }}>
                         <span style={{ fontSize: 12, color: "#374151", fontFamily: "'Inter',sans-serif", fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4 }}>
                           <MapPin size={11} style={{ color: P }} />
                           {order.district || order.division || "BD"}
@@ -633,7 +883,7 @@ export default function AdminOrders() {
                       </td>
 
                       {/* Payment Method */}
-                      <td style={{ padding: "16px 20px" }}>
+                      <td style={{ padding: "16px" }}>
                         <span style={{ 
                           fontSize: 11, 
                           color: payMeta.color, 
@@ -649,14 +899,14 @@ export default function AdminOrders() {
                       </td>
 
                       {/* Grand Total */}
-                      <td style={{ padding: "16px 20px" }}>
+                      <td style={{ padding: "16px" }}>
                         <span style={{ fontSize: 14, fontWeight: 800, color: "#111827", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
                           {formatPrice(order.total)}
                         </span>
                       </td>
 
                       {/* Status Badges with dropdown inline quick switch */}
-                      <td style={{ padding: "16px 20px" }}>
+                      <td style={{ padding: "16px" }}>
                         <select
                           value={order.status}
                           onChange={(e) => quickUpdateStatus(order.id, order.order_number, e.target.value as OrderStatus)}
@@ -682,7 +932,7 @@ export default function AdminOrders() {
                       </td>
 
                       {/* Order Date */}
-                      <td style={{ padding: "16px 20px" }}>
+                      <td style={{ padding: "16px" }}>
                         <span style={{ fontSize: 11, color: "#6B7280", fontFamily: "'Inter',sans-serif", fontWeight: 500, whiteSpace: "nowrap" }}>
                           {new Date(order.created_at).toLocaleDateString("en-US", {
                             month: 'short',
@@ -693,28 +943,56 @@ export default function AdminOrders() {
                         </span>
                       </td>
 
-                      {/* Actions */}
-                      <td style={{ padding: "16px 20px", textAlign: "right" }}>
-                        <button onClick={() => navigate(`/admin/orders/${order.id}`)}
-                          style={{ 
-                            backgroundColor: P, 
-                            color: "#fff",
-                            border: "none", 
-                            borderRadius: 8,
-                            padding: "6px 12px",
-                            cursor: "pointer", 
-                            display: "inline-flex", 
-                            alignItems: "center", 
-                            gap: 4, 
-                            fontSize: 12, 
-                            fontFamily: "'Inter',sans-serif", 
-                            fontWeight: 700,
-                            transition: "all 0.15s" 
-                          }}
-                        >
-                          <span>View</span>
-                          <ChevronRight size={13} />
-                        </button>
+                      {/* Actions: View & Delete */}
+                      <td style={{ padding: "16px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <button onClick={() => navigate(`/admin/orders/${order.id}`)}
+                            title="View Order Details"
+                            style={{ 
+                              backgroundColor: P, 
+                              color: "#fff",
+                              border: "none", 
+                              borderRadius: 8,
+                              padding: "6px 10px",
+                              cursor: "pointer", 
+                              display: "inline-flex", 
+                              alignItems: "center", 
+                              gap: 4, 
+                              fontSize: 12, 
+                              fontFamily: "'Inter',sans-serif", 
+                              fontWeight: 700,
+                              transition: "all 0.15s" 
+                            }}
+                          >
+                            <span>View</span>
+                            <ChevronRight size={13} />
+                          </button>
+
+                          <button 
+                            onClick={() => setDeleteModalOrder(order)}
+                            title="Delete this order"
+                            style={{ 
+                              backgroundColor: "#FEF2F2", 
+                              color: "#DC2626",
+                              border: "1px solid #FECACA", 
+                              borderRadius: 8,
+                              padding: "6px 8px",
+                              cursor: "pointer", 
+                              display: "inline-flex", 
+                              alignItems: "center", 
+                              justifyContent: "center",
+                              transition: "all 0.15s" 
+                            }}
+                            onMouseEnter={(e) => {
+                              (e.currentTarget as HTMLElement).style.backgroundColor = "#FEE2E2";
+                            }}
+                            onMouseLeave={(e) => {
+                              (e.currentTarget as HTMLElement).style.backgroundColor = "#FEF2F2";
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -734,19 +1012,28 @@ export default function AdminOrders() {
                 {filtered.map((order) => {
                   const st = STATUS_LABELS[order.status] ?? STATUS_LABELS.pending;
                   const payMeta = PAYMENT_LABELS[order.payment_method] ?? { label: order.payment_method, bg: "#F3F4F6", color: "#4B5563" };
+                  const isSelected = selectedIds.includes(order.id);
 
                   return (
                     <div key={order.id} style={{
-                      backgroundColor: "#fff",
+                      backgroundColor: isSelected ? "#F0FDF4" : "#fff",
                       borderRadius: 14,
-                      border: "1px solid #E6E8EC",
+                      border: isSelected ? `1.5px solid ${P}` : "1px solid #E6E8EC",
                       padding: 16,
                       boxShadow: "0 2px 6px rgba(0,0,0,0.01)"
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: P }}>
-                          #{order.order_number}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(order.id)}
+                            style={{ cursor: "pointer", width: 16, height: 16, accentColor: P }}
+                          />
+                          <span style={{ fontSize: 14, fontWeight: 800, color: P }}>
+                            #{order.order_number}
+                          </span>
+                        </div>
                         <select
                           value={order.status}
                           onChange={(e) => quickUpdateStatus(order.id, order.order_number, e.target.value as OrderStatus)}
@@ -793,27 +1080,47 @@ export default function AdminOrders() {
                         </span>
                       </div>
 
-                      <button 
-                        onClick={() => navigate(`/admin/orders/${order.id}`)}
-                        style={{
-                          marginTop: 12,
-                          width: "100%",
-                          backgroundColor: "#F4F7F3",
-                          color: P,
-                          border: "1px solid #E2E8F0",
-                          borderRadius: 8,
-                          padding: "8px 0",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 6
-                        }}
-                      >
-                        <Eye size={13} /> View Full Order Details
-                      </button>
+                      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                        <button 
+                          onClick={() => navigate(`/admin/orders/${order.id}`)}
+                          style={{
+                            flex: 1,
+                            backgroundColor: "#F4F7F3",
+                            color: P,
+                            border: "1px solid #E2E8F0",
+                            borderRadius: 8,
+                            padding: "8px 0",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6
+                          }}
+                        >
+                          <Eye size={13} /> View Details
+                        </button>
+                        <button 
+                          onClick={() => setDeleteModalOrder(order)}
+                          style={{
+                            backgroundColor: "#FEF2F2",
+                            color: "#DC2626",
+                            border: "1px solid #FECACA",
+                            borderRadius: 8,
+                            padding: "8px 14px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 4
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -843,6 +1150,234 @@ export default function AdminOrders() {
           )}
         </div>
       </div>
+
+      {/* SINGLE ORDER DELETE CONFIRMATION MODAL */}
+      {deleteModalOrder && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 20,
+          zIndex: 10000,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            backgroundColor: "#fff",
+            borderRadius: 20,
+            maxWidth: 460,
+            width: "100%",
+            padding: 28,
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            border: "1px solid #E5E7EB",
+            animation: "fadeIn 0.15s ease-out"
+          }}>
+            <div style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              backgroundColor: "#FEF2F2",
+              color: "#DC2626",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px"
+            }}>
+              <AlertTriangle size={26} />
+            </div>
+
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111827", textAlign: "center", margin: "0 0 8px", fontFamily: "'Inter',sans-serif" }}>
+              Delete Order #{deleteModalOrder.order_number}?
+            </h3>
+
+            <p style={{ fontSize: 13, color: "#4B5563", textAlign: "center", lineHeight: 1.5, margin: "0 0 20px", fontFamily: "'Inter',sans-serif" }}>
+              This will permanently remove this order, its items, and transaction history from the database. <strong>This action cannot be undone.</strong>
+            </p>
+
+            {/* Order summary mini card */}
+            <div style={{
+              backgroundColor: "#F9FAFB",
+              borderRadius: 12,
+              padding: "12px 16px",
+              border: "1px solid #E5E7EB",
+              marginBottom: 24,
+              fontSize: 12,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B7280" }}>Customer:</span>
+                <span style={{ fontWeight: 700, color: "#111827" }}>{deleteModalOrder.customer_name}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B7280" }}>Phone:</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>{deleteModalOrder.phone}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B7280" }}>Total Amount:</span>
+                <span style={{ fontWeight: 800, color: P }}>{formatPrice(deleteModalOrder.total)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#6B7280" }}>Status:</span>
+                <span style={{ fontWeight: 700, textTransform: "capitalize", color: STATUS_LABELS[deleteModalOrder.status]?.color || "#111827" }}>
+                  {deleteModalOrder.status}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteModalOrder(null)}
+                style={{
+                  flex: 1,
+                  padding: "11px 0",
+                  backgroundColor: "#F3F4F6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  fontFamily: "'Inter',sans-serif"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => handleDeleteOrder(deleteModalOrder)}
+                style={{
+                  flex: 1,
+                  padding: "11px 0",
+                  backgroundColor: "#DC2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  fontFamily: "'Inter',sans-serif",
+                  boxShadow: "0 4px 12px rgba(220,38,38,0.2)"
+                }}
+              >
+                {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                <span>{isDeleting ? "Deleting..." : "Permanently Delete"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK DELETE CONFIRMATION MODAL */}
+      {showBulkDeleteModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 20,
+          zIndex: 10000,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            backgroundColor: "#fff",
+            borderRadius: 20,
+            maxWidth: 460,
+            width: "100%",
+            padding: 28,
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            border: "1px solid #E5E7EB",
+            animation: "fadeIn 0.15s ease-out"
+          }}>
+            <div style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              backgroundColor: "#FEF2F2",
+              color: "#DC2626",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px"
+            }}>
+              <AlertTriangle size={26} />
+            </div>
+
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111827", textAlign: "center", margin: "0 0 8px", fontFamily: "'Inter',sans-serif" }}>
+              Delete {selectedIds.length} Selected Orders?
+            </h3>
+
+            <p style={{ fontSize: 13, color: "#4B5563", textAlign: "center", lineHeight: 1.5, margin: "0 0 20px", fontFamily: "'Inter',sans-serif" }}>
+              You are about to permanently delete <strong>{selectedIds.length} orders</strong> and all their associated line items. This action is irreversible.
+            </p>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setShowBulkDeleteModal(false)}
+                style={{
+                  flex: 1,
+                  padding: "11px 0",
+                  backgroundColor: "#F3F4F6",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  fontFamily: "'Inter',sans-serif"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleBulkDelete}
+                style={{
+                  flex: 1,
+                  padding: "11px 0",
+                  backgroundColor: "#DC2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  fontFamily: "'Inter',sans-serif",
+                  boxShadow: "0 4px 12px rgba(220,38,38,0.2)"
+                }}
+              >
+                {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                <span>{isDeleting ? "Deleting..." : `Delete ${selectedIds.length} Orders`}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @media (max-width: 768px) {

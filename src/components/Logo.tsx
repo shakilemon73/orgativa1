@@ -1,5 +1,6 @@
 import React from "react";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 interface LogoProps {
   size?: number;
@@ -19,20 +20,27 @@ export default function Logo({
 }: LogoProps) {
   const [imgError, setImgError] = React.useState(false);
   const { width } = useResponsive();
+  const { getSetting } = useSiteSettings();
+
+  const siteName = getSetting("site_name", "Orgativa");
+  const logoSubtext = getSetting("logo_subtext", "Pure Organic");
+  const customLogoUrl = getSetting("site_logo_url", "");
+
+  const logoSrc = (!imgError && customLogoUrl) ? customLogoUrl : "/assets/orgativa_logo.png";
 
   const defaultTextColor = textColor || (variant === "dark" ? "#FFFFFF" : "#0D1F0B");
   const defaultSubtextColor = subtextColor || (variant === "dark" ? "rgba(255,255,255,0.6)" : "#8FA888");
 
   // Premium fluid typography and responsive sizing
   const shouldShowText = showText && width > 340;
-  const shouldShowTagline = width > 385;
+  const shouldShowTagline = width > 385 && Boolean(logoSubtext);
 
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: Math.max(8, size * 0.22), userSelect: "none" }}>
       {!imgError ? (
         <img
-          src="/assets/orgativa_logo.png"
-          alt="Orgativa Logo"
+          src={logoSrc}
+          alt={`${siteName} Logo`}
           referrerPolicy="no-referrer"
           onError={() => setImgError(true)}
           style={{
@@ -87,7 +95,7 @@ export default function Logo({
               lineHeight: 1,
             }}
           >
-            Orgativa
+            {siteName}
           </span>
           {shouldShowTagline && (
             <span
@@ -103,7 +111,7 @@ export default function Logo({
                 whiteSpace: "nowrap"
               }}
             >
-              Pure Organic
+              {logoSubtext}
             </span>
           )}
         </div>

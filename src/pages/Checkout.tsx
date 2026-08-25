@@ -8,125 +8,172 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useResponsive } from "@/hooks/use-responsive";
 import { submitOrder } from "@/lib/supabase-hooks";
+import {
+  Banknote,
+  Smartphone,
+  CreditCard,
+  Building2,
+  CheckCircle2,
+  Copy,
+  Check,
+  ShieldCheck,
+  Truck,
+  ArrowRight,
+  ArrowLeft,
+  AlertCircle,
+  Clock,
+  Lock,
+  RotateCcw
+} from "lucide-react";
 
 const P = "#2D5A27";
 const P_DARK = "#1a4016";
 const P_LIGHT = "#F4F7F3";
 
-const divisions = [
-  { bn: "ঢাকা", en: "Dhaka" },
-  { bn: "চট্টগ্রাম", en: "Chattogram" },
-  { bn: "সিলেট", en: "Sylhet" },
-  { bn: "রাজশাহী", en: "Rajshahi" },
-  { bn: "খুলনা", en: "Khulna" },
-  { bn: "বরিশাল", en: "Barishal" },
-  { bn: "রংপুর", en: "Rangpur" },
-  { bn: "ময়মনসিংহ", en: "Mymensingh" },
-];
-
-const districtsByDivision: Record<string, { bn: string; en: string }[]> = {
-  "Dhaka": [
-    { bn: "ঢাকা", en: "Dhaka" }, { bn: "গাজীপুর", en: "Gazipur" }, { bn: "নারায়ণগঞ্জ", en: "Narayanganj" },
-    { bn: "নরসিংদী", en: "Narsingdi" }, { bn: "টাঙ্গাইল", en: "Tangail" }, { bn: "মুন্সীগঞ্জ", en: "Munshiganj" },
-    { bn: "মানিকগঞ্জ", en: "Manikganj" }, { bn: "ফরিদপুর", en: "Faridpur" }
-  ],
-  "Chattogram": [
-    { bn: "চট্টগ্রাম", en: "Chattogram" }, { bn: "কক্সবাজার", en: "Cox's Bazar" }, { bn: "কুমিল্লা", en: "Cumilla" },
-    { bn: "ফেনী", en: "Feni" }, { bn: "নোয়াখালী", en: "Noakhali" }, { bn: "লক্ষ্মীপুর", en: "Lakshmipur" }, { bn: "চাঁদপুর", en: "Chandpur" }
-  ],
-  "Sylhet": [
-    { bn: "সিলেট", en: "Sylhet" }, { bn: "মৌলভীবাজার", en: "Moulvibazar" }, { bn: "হবিগঞ্জ", en: "Habiganj" }, { bn: "সুনামগঞ্জ", en: "Sunamganj" }
-  ],
-  "Rajshahi": [
-    { bn: "রাজশাহী", en: "Rajshahi" }, { bn: "বগুড়া", en: "Bogra" }, { bn: "জয়পুরহাট", en: "Joypurhat" },
-    { bn: "নওগাঁ", en: "Naogaon" }, { bn: "নাটোর", en: "Natore" }, { bn: "নবাবগঞ্জ", en: "Nawabganj" },
-    { bn: "পাবনা", en: "Pabna" }, { bn: "সিরাজগঞ্জ", en: "Sirajganj" }
-  ],
-  "Khulna": [
-    { bn: "খুলনা", en: "Khulna" }, { bn: "বাগেরহাট", en: "Bagerhat" }, { bn: "চুয়াডাঙ্গা", en: "Chuadanga" },
-    { bn: "যশোর", en: "Jashore" }, { bn: "ঝিনাইদহ", en: "Jhenaidah" }, { bn: "মাগুরা", en: "Magura" },
-    { bn: "মেহেরপুর", en: "Meherpur" }, { bn: "নড়াইল", en: "Narail" }, { bn: "সাতক্ষীরা", en: "Satkhira" }
-  ],
-  "Barishal": [
-    { bn: "বরিশাল", en: "Barishal" }, { bn: "বরগুনা", en: "Barguna" }, { bn: "ভোলা", en: "Bhola" },
-    { bn: "ঝালকাঠি", en: "Jhalokati" }, { bn: "পটুয়াখালী", en: "Patuakhali" }, { bn: "পিরোজপুর", en: "Pirojpur" }
-  ],
-  "Rangpur": [
-    { bn: "রংপুর", en: "Rangpur" }, { bn: "দিনাজপুর", en: "Dinajpur" }, { bn: "গাইবান্ধা", en: "Gaibandha" },
-    { bn: "কুড়িগ্রাম", en: "Kurigram" }, { bn: "লালমনিরহাট", en: "Lalmonirhat" }, { bn: "নীলফামারী", en: "Nilphamari" },
-    { bn: "পঞ্চগড়", en: "Panchagarh" }, { bn: "ঠাকুরগাঁও", en: "Thakurgaon" }
-  ],
-  "Mymensingh": [
-    { bn: "ময়মনসিংহ", en: "Mymensingh" }, { bn: "জামালপুর", en: "Jamalpur" }, { bn: "নেত্রকোণা", en: "Netrokona" }, { bn: "শেরপুর", en: "Sherpur" }
-  ],
-};
-
-type PayMethod = "bkash" | "nagad" | "rocket" | "cod" | "bank";
+type PaymentType = "cod" | "online";
+type OnlineMethod = "bkash" | "nagad" | "rocket" | "bank";
 
 export default function Checkout() {
   const [, navigate] = useLocation();
   const { items, subtotal, clearCart } = useCart();
   const { lang, t, formatPrice, formatNum } = useLanguage();
   const { getSetting } = useSiteSettings();
+  const { isMobile } = useResponsive();
 
-  const payMethods = [
-    { id: "bkash" as PayMethod, label: "bKash", color: "#E2136E", icon: "account_balance_wallet", sub: t("মোবাইল ব্যাংকিং", "Mobile Banking") },
-    { id: "nagad" as PayMethod, label: "Nagad", color: "#F7941D", icon: "account_balance_wallet", sub: t("মোবাইল ব্যাংকিং", "Mobile Banking") },
-    { id: "rocket" as PayMethod, label: "Rocket", color: "#8B22A0", icon: "account_balance_wallet", sub: t("ডাচ-বাংলা মোবাইল", "DBBL Mobile") },
-    { id: "cod" as PayMethod, label: t("ক্যাশ অন ডেলিভারি", "Cash on Delivery"), color: "#2D5A27", icon: "payments", sub: t("পণ্য পেয়ে পরিশোধ", "Pay upon delivery") },
-    { id: "bank" as PayMethod, label: t("ব্যাংক ট্রান্সফার", "Bank Transfer"), color: "#1A3A5C", icon: "account_balance", sub: t("ব্র্যাক / ডাচ-বাংলা", "BRAC / DBBL") },
-  ];
-
-  const steps = [t("ডেলিভারি", "Delivery"), t("পেমেন্ট", "Payment"), t("পর্যালোচনা", "Review")];
-
-  const [step, setStep] = useState(0);
-  const [payMethod, setPayMethod] = useState<PayMethod>("bkash");
+  // Primary Payment Mode: "cod" (Cash on Delivery) vs "online" (Online Payment)
+  const [paymentType, setPaymentType] = useState<PaymentType>("cod");
+  // Sub-method if online payment is chosen
+  const [onlineMethod, setOnlineMethod] = useState<OnlineMethod>("bkash");
   const [mobileNumber, setMobileNumber] = useState("");
   const [transactionId, setTransactionId] = useState("");
+  const [copiedNumber, setCopiedNumber] = useState(false);
+
+  // Flow step: 0 = Form & Payment, 1 = Review & Confirmation
+  const [currentStep, setCurrentStep] = useState<0 | 1>(0);
+
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId] = useState(`ORG-${Math.floor(100000 + Math.random() * 900000)}`);
   const [isPlacing, setIsPlacing] = useState(false);
   const [placementError, setPlacementError] = useState<string | null>(null);
-  const { isMobile } = useResponsive();
 
+  // Simplified customer form layout
   const [form, setForm] = useState({
-    fullName: "", phone: "", email: "",
-    division: "Dhaka", district: "Dhaka",
-    thana: "", address: "", postcode: "", notes: "",
+    fullName: "",
+    phone: "",
+    address: "",
+    email: "",
+    deliveryZone: "dhaka", // "dhaka" | "outside_dhaka"
+    notes: "",
   });
-  function setF(key: string, val: string) { setForm((prev) => ({ ...prev, [key]: val })); }
 
+  function setF(key: string, val: string) {
+    setForm((prev) => ({ ...prev, [key]: val }));
+  }
+
+  // Delivery calculations
   const freeThreshold = Number(getSetting("delivery_free_threshold", "1500")) || 1500;
   const insideDhakaCharge = Number(getSetting("delivery_inside_dhaka", "60")) || 60;
   const outsideDhakaCharge = Number(getSetting("delivery_outside_dhaka", "120")) || 120;
+  const contactPhone = getSetting("contact_phone", "01700-000000");
 
-  const baseDeliveryCharge = form.division === "Dhaka" ? insideDhakaCharge : outsideDhakaCharge;
+  const baseDeliveryCharge = form.deliveryZone === "dhaka" ? insideDhakaCharge : outsideDhakaCharge;
   const deliveryFree = subtotal >= freeThreshold;
   const deliveryCharge = deliveryFree ? 0 : baseDeliveryCharge;
   const total = subtotal + deliveryCharge;
-  const px = isMobile ? "16px" : "64px";
+
+  // Validation
+  const isContactValid = form.fullName.trim().length >= 2 && form.phone.trim().length >= 10 && form.address.trim().length >= 5;
+  const isOnlinePaymentValid = paymentType === "cod" || (mobileNumber.trim().length >= 10 && transactionId.trim().length >= 4);
+  const isFormComplete = isContactValid && isOnlinePaymentValid;
+
+  const onlineMethodsConfig: Record<OnlineMethod, {
+    label: string;
+    sub: string;
+    accountNo: string;
+    accountType: string;
+    color: string;
+    accentBg: string;
+    icon: any;
+    instructionsBn: string;
+    instructionsEn: string;
+  }> = {
+    bkash: {
+      label: "bKash",
+      sub: t("বিকাশ মোবাইল ব্যাংকিং", "bKash Mobile Banking"),
+      accountNo: contactPhone.replace(/[^0-9+]/g, "") || "01700000000",
+      accountType: "Merchant / Personal (Send Money)",
+      color: "#E2136E",
+      accentBg: "#FDF2F7",
+      icon: Smartphone,
+      instructionsBn: "আপনার bKash অ্যাপ অথবা *247# ডায়াল করে 'Send Money' করুন। এরপর আপনার বিকাশ নম্বর ও TrxID নিচে লিখুন।",
+      instructionsEn: "Open bKash App or dial *247# and Send Money to this number. Then submit your sender number & TrxID below."
+    },
+    nagad: {
+      label: "Nagad",
+      sub: t("নগদ মোবাইল ব্যাংকিং", "Nagad Mobile Banking"),
+      accountNo: contactPhone.replace(/[^0-9+]/g, "") || "01700000000",
+      accountType: "Merchant / Personal (Send Money)",
+      color: "#F7941D",
+      accentBg: "#FEF7EE",
+      icon: Smartphone,
+      instructionsBn: "আপনার Nagad অ্যাপ অথবা *167# ডায়াল করে 'Send Money' করুন। এরপর আপনার নগদ নম্বর ও TrxID নিচে লিখুন।",
+      instructionsEn: "Open Nagad App or dial *167# and Send Money to this number. Then submit your sender number & TrxID below."
+    },
+    rocket: {
+      label: "Rocket",
+      sub: t("রকেট (ডিবিবিএল)", "DBBL Rocket Mobile"),
+      accountNo: (contactPhone.replace(/[^0-9+]/g, "") || "01700000000") + "4",
+      accountType: "Personal (Send Money)",
+      color: "#8B22A0",
+      accentBg: "#FAF4FB",
+      icon: Smartphone,
+      instructionsBn: "আপনার Rocket অ্যাপ বা *322# থেকে Send Money করুন। সফল ট্রানজেকশনের TrxID ও নম্বর নিচে প্রবেশ করুন।",
+      instructionsEn: "Send money via Rocket App or *322#. Then enter the transaction TrxID and your Rocket number below."
+    },
+    bank: {
+      label: "Bank Transfer",
+      sub: t("ব্যাংক ট্রান্সফার / এনপিএসবি", "Direct Bank / NPSB Transfer"),
+      accountNo: "1501203948291001",
+      accountType: "BRAC Bank PLC (Gulshan Branch)",
+      color: "#1A3A5C",
+      accentBg: "#F0F5FA",
+      icon: Building2,
+      instructionsBn: "অ্যাকাউন্ট নাম: Orgativa Organic Foods | হিসাব নং: 1501203948291001 | ব্র্যাক ব্যাংক (গুলশান ব্রাঞ্চ)। রেফারেন্সে আপনার নাম বা ফোন দিন।",
+      instructionsEn: "Account Name: Orgativa Organic Foods | A/C No: 1501203948291001 | BRAC Bank (Gulshan Branch). Use your name/phone as reference."
+    }
+  };
+
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text);
+    setCopiedNumber(true);
+    setTimeout(() => setCopiedNumber(false), 2500);
+  }
 
   async function handlePlaceOrder() {
     try {
       setIsPlacing(true);
       setPlacementError(null);
+
+      const actualPaymentMethod = paymentType === "cod" ? "cod" : onlineMethod;
+      const zoneLabel = form.deliveryZone === "dhaka" ? "Inside Dhaka (ঢাকা সিটি)" : "Outside Dhaka (ঢাকার বাইরে)";
+
       const res = await submitOrder({
         orderNumber: orderId,
-        customerName: form.fullName,
-        phone: form.phone,
-        email: form.email || undefined,
-        division: form.division,
-        district: form.district,
-        thana: form.thana,
-        address: form.address,
-        postcode: form.postcode || undefined,
-        paymentMethod: payMethod,
-        paymentNumber: mobileNumber || undefined,
-        transactionId: transactionId || undefined,
+        customerName: form.fullName.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim() || undefined,
+        division: form.deliveryZone === "dhaka" ? "Dhaka" : "Outside Dhaka",
+        district: form.deliveryZone === "dhaka" ? "Dhaka" : "Nationwide",
+        thana: form.deliveryZone === "dhaka" ? "Dhaka City" : "Outside Dhaka",
+        address: `${form.address.trim()} (${zoneLabel})`,
+        postcode: undefined,
+        paymentMethod: actualPaymentMethod,
+        paymentNumber: paymentType === "online" ? mobileNumber.trim() : undefined,
+        transactionId: paymentType === "online" ? transactionId.trim() : undefined,
         subtotal,
         deliveryFee: deliveryCharge,
         total,
-        notes: form.notes || undefined,
+        notes: form.notes.trim() || undefined,
         items: items.map((item) => ({
           productId: typeof item.product.id === "string" ? item.product.id : undefined,
           productName: item.product.name,
@@ -145,13 +192,15 @@ export default function Checkout() {
       setOrderPlaced(true);
     } catch (err: any) {
       console.error("Order placement error:", err);
-      setPlacementError(err?.message || t("অর্ডার সফলভাবে সম্পন্ন করা যায়নি। দয়া করে আবার চেষ্টা করুন।", "Could not complete your order. Please try again."));
+      setPlacementError(err?.message || t("অর্ডার সম্পন্ন করা যায়নি। দয়া করে আবার চেষ্টা করুন।", "Could not complete your order. Please try again."));
     } finally {
       setIsPlacing(false);
     }
   }
 
-  if (orderPlaced) return <OrderSuccess orderId={orderId} total={total} lang={lang} t={t} formatPrice={formatPrice} />;
+  if (orderPlaced) {
+    return <OrderSuccess orderId={orderId} total={total} lang={lang} t={t} formatPrice={formatPrice} />;
+  }
 
   if (items.length === 0) {
     return (
@@ -170,103 +219,762 @@ export default function Checkout() {
     );
   }
 
+  const px = isMobile ? "16px" : "48px";
+
   return (
-    <div style={{ backgroundColor: "#F9F9F9", minHeight: "100vh" }}>
+    <div style={{ backgroundColor: "#F9FAF8", minHeight: "100vh" }}>
       <Header />
-      <main style={{ maxWidth: 1280, margin: "0 auto", padding: `${isMobile ? 24 : 40}px ${px} 80px` }}>
-        <div style={{ marginBottom: 32 }}>
-          <button onClick={() => navigate("/cart")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, color: P, fontSize: 13, fontFamily: "'Inter',sans-serif", marginBottom: 10 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: `${isMobile ? 20 : 36}px ${px} 80px` }}>
+        
+        {/* Navigation & Header */}
+        <div style={{ marginBottom: 24 }}>
+          <button 
+            onClick={() => navigate("/cart")} 
+            style={{ background: "none", border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, color: P, fontSize: 13, fontFamily: "'Inter',sans-serif", fontWeight: 600, marginBottom: 8 }}
+          >
+            <ArrowLeft size={16} />
             {t("ঝুড়িতে ফিরুন", "Back to Cart")}
           </button>
-          <h1 style={{ fontFamily: "'Noto Serif',serif", fontSize: isMobile ? 28 : 40, fontWeight: 400, color: "#1A1C1C" }}>
-            {t("চেকআউট", "Checkout")}
-          </h1>
-        </div>
-
-        {/* Step indicator */}
-        <div style={{ display: "flex", alignItems: "center", marginBottom: 36, maxWidth: isMobile ? "100%" : 400 }}>
-          {steps.map((s, i) => (
-            <div key={s} style={{ display: "flex", alignItems: "center", flex: i < steps.length - 1 ? 1 : "none" }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, cursor: i < step ? "pointer" : "default" }}
-                onClick={() => i < step && setStep(i)}>
-                <div style={{ width: isMobile ? 30 : 36, height: isMobile ? 30 : 36, borderRadius: "50%", backgroundColor: i <= step ? P : "#E8E8E8", color: i <= step ? "#fff" : "#737973", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
-                  {i < step ? <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check</span> : i + 1}
-                </div>
-                <span style={{ fontSize: isMobile ? 9 : 11, fontWeight: i === step ? 700 : 400, color: i <= step ? P : "#737973", fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>{s}</span>
-              </div>
-              {i < steps.length - 1 && <div style={{ flex: 1, height: 2, backgroundColor: i < step ? P : "#E8E8E8", margin: "0 6px", marginBottom: 20 }} />}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <h1 style={{ fontFamily: "'Noto Serif',serif", fontSize: isMobile ? 26 : 34, fontWeight: 500, color: "#111827", margin: 0 }}>
+                {t("অর্ডার চেকআউট", "Order Checkout")}
+              </h1>
+              <p style={{ fontSize: 13, color: "#6B7280", margin: "4px 0 0", fontFamily: "'Inter',sans-serif" }}>
+                {t("সহজ ও নিরাপদ অর্গানিক পণ্য ডেলিভারি", "Fast & Secure 100% Pure Organic Delivery")}
+              </p>
             </div>
-          ))}
+
+            {/* Quick Trust Badges */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: P, fontWeight: 700, backgroundColor: "#EAF3E8", padding: "6px 12px", borderRadius: 20 }}>
+                <ShieldCheck size={14} />
+                {t("১০০% খাঁটি পণ্য", "100% Pure & Lab Tested")}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 360px", gap: 24, alignItems: "start" }}>
-          <div>
-            {step === 0 && <DeliveryStep form={form} setF={setF} onNext={() => setStep(1)} isMobile={isMobile} lang={lang} t={t} />}
-            {step === 1 && (
-              <PaymentStep payMethod={payMethod} setPayMethod={setPayMethod} payMethods={payMethods}
-                mobileNumber={mobileNumber} setMobileNumber={setMobileNumber}
-                transactionId={transactionId} setTransactionId={setTransactionId}
-                onNext={() => setStep(2)} onBack={() => setStep(0)} total={total} isMobile={isMobile} t={t} formatPrice={formatPrice} />
-            )}
-            {step === 2 && (
-              <ReviewStep 
-                form={form} 
-                payMethod={payMethod} 
-                payMethods={payMethods} 
-                onBack={() => setStep(1)} 
-                onPlace={handlePlaceOrder} 
-                isMobile={isMobile} 
-                t={t}
-                isPlacing={isPlacing}
-                placementError={placementError}
-              />
+        {/* TWO-COLUMN LAYOUT: MAIN FORM & SUMMARY */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap: 24, alignItems: "start" }}>
+          
+          {/* LEFT COLUMN: CUSTOMER DETAILS & PAYMENT METHOD */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+            {/* STEP 0: DETAILS & PAYMENT METHOD */}
+            {currentStep === 0 ? (
+              <>
+                {/* 1. CUSTOMER & DELIVERY INFORMATION (CLEAN: Name, Number, Address, Email Optional) */}
+                <div style={{ backgroundColor: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", padding: isMobile ? 18 : 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18, borderBottom: "1px solid #F3F4F6", paddingBottom: 14 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: P, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, fontFamily: "'Inter',sans-serif" }}>
+                      1
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0, fontFamily: "'Inter',sans-serif" }}>
+                        {t("ডেলিভারি তথ্য", "Delivery & Customer Details")}
+                      </h2>
+                      <span style={{ fontSize: 12, color: "#6B7280" }}>
+                        {t("পণ্য পৌঁছানোর জন্য আপনার সঠিক তথ্য প্রদান করুন", "Enter your information for delivery")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+                    {/* Name */}
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6, fontFamily: "'Inter',sans-serif" }}>
+                        {t("আপনার নাম", "Full Name")} <span style={{ color: "#DC2626" }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        style={inputStyle}
+                        placeholder={t("আপনার পুরো নাম লিখুন", "e.g. Mohammad Rahim")}
+                        value={form.fullName}
+                        onChange={(e) => setF("fullName", e.target.value)}
+                      />
+                    </div>
+
+                    {/* Number / Phone */}
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6, fontFamily: "'Inter',sans-serif" }}>
+                        {t("মোবাইল নম্বর", "Mobile Number")} <span style={{ color: "#DC2626" }}>*</span>
+                      </label>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#6B7280", fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                          +880
+                        </span>
+                        <input
+                          type="tel"
+                          style={{ ...inputStyle, paddingLeft: 54 }}
+                          placeholder="01XXXXXXXXX"
+                          value={form.phone}
+                          onChange={(e) => setF("phone", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Full Address */}
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6, fontFamily: "'Inter',sans-serif" }}>
+                        {t("সম্পূর্ণ ডেলিভারি ঠিকানা", "Full Delivery Address")} <span style={{ color: "#DC2626" }}>*</span>
+                      </label>
+                      <textarea
+                        style={{ ...inputStyle, height: 75, resize: "vertical" }}
+                        placeholder={t("বাসা/ফ্ল্যাট নং, রোড নং, এলাকা, থানা ও শহর", "House No, Road No, Area, Police Station & City")}
+                        value={form.address}
+                        onChange={(e) => setF("address", e.target.value)}
+                      />
+                    </div>
+
+                    {/* Email (Optional) */}
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6, fontFamily: "'Inter',sans-serif" }}>
+                        {t("ইমেইল (ঐচ্ছিক)", "Email (Optional)")}
+                      </label>
+                      <input
+                        type="email"
+                        style={inputStyle}
+                        placeholder="yourname@example.com"
+                        value={form.email}
+                        onChange={(e) => setF("email", e.target.value)}
+                      />
+                    </div>
+
+                    {/* Delivery Zone Selector (Inside Dhaka vs Outside Dhaka) */}
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6, fontFamily: "'Inter',sans-serif" }}>
+                        {t("ডেলিভারি এরিয়া", "Delivery Location")} <span style={{ color: "#DC2626" }}>*</span>
+                      </label>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => setF("deliveryZone", "dhaka")}
+                          style={{
+                            padding: "10px 8px",
+                            borderRadius: 8,
+                            border: form.deliveryZone === "dhaka" ? `2px solid ${P}` : "1px solid #D1D5DB",
+                            backgroundColor: form.deliveryZone === "dhaka" ? "#F0FDF4" : "#fff",
+                            color: form.deliveryZone === "dhaka" ? P : "#374151",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            fontFamily: "'Inter',sans-serif",
+                            cursor: "pointer",
+                            textAlign: "center",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 2,
+                            alignItems: "center"
+                          }}
+                        >
+                          <span>{t("ঢাকা সিটি", "Inside Dhaka")}</span>
+                          <span style={{ fontSize: 11, fontWeight: 500, color: form.deliveryZone === "dhaka" ? P : "#6B7280" }}>
+                            {deliveryFree ? t("ফ্রি ডেলিভারি", "FREE") : `৳${insideDhakaCharge}`}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setF("deliveryZone", "outside_dhaka")}
+                          style={{
+                            padding: "10px 8px",
+                            borderRadius: 8,
+                            border: form.deliveryZone === "outside_dhaka" ? `2px solid ${P}` : "1px solid #D1D5DB",
+                            backgroundColor: form.deliveryZone === "outside_dhaka" ? "#F0FDF4" : "#fff",
+                            color: form.deliveryZone === "outside_dhaka" ? P : "#374151",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            fontFamily: "'Inter',sans-serif",
+                            cursor: "pointer",
+                            textAlign: "center",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 2,
+                            alignItems: "center"
+                          }}
+                        >
+                          <span>{t("ঢাকার বাইরে", "Outside Dhaka")}</span>
+                          <span style={{ fontSize: 11, fontWeight: 500, color: form.deliveryZone === "outside_dhaka" ? P : "#6B7280" }}>
+                            {deliveryFree ? t("ফ্রি ডেলিভারি", "FREE") : `৳${outsideDhakaCharge}`}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Special Instructions (Optional) */}
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#4B5563", marginBottom: 6, fontFamily: "'Inter',sans-serif" }}>
+                        {t("বিশেষ ডেলিভারি নির্দেশনা (ঐচ্ছিক)", "Special Order Notes (Optional)")}
+                      </label>
+                      <input
+                        type="text"
+                        style={inputStyle}
+                        placeholder={t("যেমন: কল দিয়ে আসবেন / বিকালে ডেলিভারি দিন", "e.g. Call before delivery / deliver in evening")}
+                        value={form.notes}
+                        onChange={(e) => setF("notes", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. PAYMENT METHOD SELECTION TABS: Cash on Delivery vs Online Payment */}
+                <div style={{ backgroundColor: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", padding: isMobile ? 18 : 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18, borderBottom: "1px solid #F3F4F6", paddingBottom: 14 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: P, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, fontFamily: "'Inter',sans-serif" }}>
+                      2
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0, fontFamily: "'Inter',sans-serif" }}>
+                        {t("পেমেন্ট পদ্ধতি নির্বাচন করুন", "Select Payment Method")}
+                      </h2>
+                      <span style={{ fontSize: 12, color: "#6B7280" }}>
+                        {t("ক্যাশ অন ডেলিভারি অথবা অনলাইন পেমেন্ট বেছে নিন", "Choose Cash on Delivery or Online Mobile/Bank Payment")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* PRIMARY TABS: CASH ON DELIVERY vs ONLINE PAYMENT */}
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 20 }}>
+                    
+                    {/* Tab 1: Cash on Delivery */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentType("cod")}
+                      style={{
+                        padding: "16px 18px",
+                        borderRadius: 14,
+                        border: paymentType === "cod" ? `2.5px solid ${P}` : "1.5px solid #E5E7EB",
+                        backgroundColor: paymentType === "cod" ? "#F0FDF4" : "#FAFBF9",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        textAlign: "left",
+                        transition: "all 0.15s ease",
+                        position: "relative"
+                      }}
+                    >
+                      <div style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 12,
+                        backgroundColor: paymentType === "cod" ? P : "#E5E7EB",
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0
+                      }}>
+                        <Banknote size={22} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: paymentType === "cod" ? P : "#111827", fontFamily: "'Inter',sans-serif" }}>
+                            {t("ক্যাশ অন ডেলিভারি", "Cash on Delivery")}
+                          </span>
+                          <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: "#E5E7EB", color: "#374151", padding: "2px 6px", borderRadius: 10 }}>
+                            COD
+                          </span>
+                        </div>
+                        <span style={{ fontSize: 12, color: "#6B7280", display: "block", marginTop: 2 }}>
+                          {t("পণ্য হাতে পেয়ে মূল্য পরিশোধ", "Pay cash upon delivery")}
+                        </span>
+                      </div>
+                      {paymentType === "cod" && (
+                        <CheckCircle2 size={20} style={{ color: P }} />
+                      )}
+                    </button>
+
+                    {/* Tab 2: Online Payment */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentType("online")}
+                      style={{
+                        padding: "16px 18px",
+                        borderRadius: 14,
+                        border: paymentType === "online" ? `2.5px solid ${P}` : "1.5px solid #E5E7EB",
+                        backgroundColor: paymentType === "online" ? "#F0FDF4" : "#FAFBF9",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        textAlign: "left",
+                        transition: "all 0.15s ease"
+                      }}
+                    >
+                      <div style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 12,
+                        backgroundColor: paymentType === "online" ? P : "#E5E7EB",
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0
+                      }}>
+                        <Smartphone size={22} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: paymentType === "online" ? P : "#111827", fontFamily: "'Inter',sans-serif" }}>
+                            {t("অনলাইন পেমেন্ট", "Online Payment")}
+                          </span>
+                          <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: "#FCE7F3", color: "#BE185D", padding: "2px 6px", borderRadius: 10 }}>
+                            bKash/Nagad
+                          </span>
+                        </div>
+                        <span style={{ fontSize: 12, color: "#6B7280", display: "block", marginTop: 2 }}>
+                          {t("বিকাশ, নগদ, রকেট বা ব্যাংক", "bKash, Nagad, Rocket, Bank")}
+                        </span>
+                      </div>
+                      {paymentType === "online" && (
+                        <CheckCircle2 size={20} style={{ color: P }} />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* IF CASH ON DELIVERY IS SELECTED */}
+                  {paymentType === "cod" && (
+                    <div style={{
+                      backgroundColor: "#F0FDF4",
+                      border: "1px solid #DCFCE7",
+                      borderRadius: 12,
+                      padding: "16px 20px",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12
+                    }}>
+                      <div style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        backgroundColor: "#DCFCE7",
+                        color: P,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0
+                      }}>
+                        <Truck size={18} />
+                      </div>
+                      <div>
+                        <h4 style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 800, color: "#166534", fontFamily: "'Inter',sans-serif" }}>
+                          {t("পণ্য হাতে পেয়ে মূল্য পরিশোধ করুন", "Pay in Cash Upon Receiving")}
+                        </h4>
+                        <p style={{ margin: 0, fontSize: 12, color: "#15803D", lineHeight: 1.5, fontFamily: "'Inter',sans-serif" }}>
+                          {t("ডেলিভারি ম্যানের কাছ থেকে পার্সেল চেক করে মোট ", "Check your parcel from our delivery agent and pay ")}
+                          <strong>{formatPrice(total)}</strong>
+                          {t(" নগদ টাকায় পরিশোধ করুন। কোনো অগ্রিম পেমেন্টের প্রয়োজন নেই।", " in cash. No advance payment required.")}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* IF ONLINE PAYMENT IS SELECTED: SHOW DETAILED PAYMENT METHODS */}
+                  {paymentType === "online" && (
+                    <div style={{
+                      backgroundColor: "#F9FAFB",
+                      borderRadius: 14,
+                      border: "1px solid #E5E7EB",
+                      padding: 18,
+                      animation: "fadeIn 0.2s ease-in-out"
+                    }}>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 10, fontFamily: "'Inter',sans-serif" }}>
+                        {t("অনলাইন মাধ্যমটি নির্বাচন করুন:", "Select Online Payment Method:")}
+                      </label>
+
+                      {/* Sub-Methods Grid */}
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+                        {(["bkash", "nagad", "rocket", "bank"] as OnlineMethod[]).map((mKey) => {
+                          const method = onlineMethodsConfig[mKey];
+                          const isSelected = onlineMethod === mKey;
+                          return (
+                            <button
+                              key={mKey}
+                              type="button"
+                              onClick={() => setOnlineMethod(mKey)}
+                              style={{
+                                padding: "12px 10px",
+                                borderRadius: 10,
+                                border: isSelected ? `2px solid ${method.color}` : "1px solid #D1D5DB",
+                                backgroundColor: isSelected ? method.accentBg : "#fff",
+                                cursor: "pointer",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: 6,
+                                transition: "all 0.15s"
+                              }}
+                            >
+                              <div style={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 8,
+                                backgroundColor: `${method.color}15`,
+                                color: method.color,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}>
+                                <method.icon size={18} />
+                              </div>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: isSelected ? method.color : "#111827", fontFamily: "'Inter',sans-serif" }}>
+                                {method.label}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Payment Details Box for Selected Method */}
+                      {(() => {
+                        const curMethod = onlineMethodsConfig[onlineMethod];
+                        return (
+                          <div style={{
+                            backgroundColor: "#fff",
+                            borderRadius: 12,
+                            border: `1px solid ${curMethod.color}30`,
+                            padding: 16,
+                            marginBottom: 16
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10, borderBottom: "1px solid #F3F4F6", paddingBottom: 10 }}>
+                              <div>
+                                <span style={{ fontSize: 11, color: "#6B7280", textTransform: "uppercase", fontWeight: 700 }}>
+                                  {curMethod.label} {t("অ্যাকাউন্ট নম্বর", "Account Number")}:
+                                </span>
+                                <div style={{ fontSize: 16, fontWeight: 800, color: curMethod.color, letterSpacing: "0.04em", fontFamily: "'Inter',sans-serif" }}>
+                                  {curMethod.accountNo}
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(curMethod.accountNo)}
+                                style={{
+                                  backgroundColor: copiedNumber ? "#DCFCE7" : "#F3F4F6",
+                                  color: copiedNumber ? "#166534" : "#374151",
+                                  border: "none",
+                                  borderRadius: 8,
+                                  padding: "6px 12px",
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6
+                                }}
+                              >
+                                {copiedNumber ? <Check size={14} /> : <Copy size={14} />}
+                                <span>{copiedNumber ? t("কপি হয়েছে!", "Copied!") : t("নম্বর কপি করুন", "Copy Number")}</span>
+                              </button>
+                            </div>
+
+                            <p style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px", fontFamily: "'Inter',sans-serif" }}>
+                              {lang === "bn" ? curMethod.instructionsBn : curMethod.instructionsEn}
+                            </p>
+
+                            {/* Required Inputs for TrxID Verification */}
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+                              <div>
+                                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 4, fontFamily: "'Inter',sans-serif" }}>
+                                  {t("আপনার প্রেরক নম্বর / অ্যাকাউন্ট", "Your Sender Number")} <span style={{ color: "#DC2626" }}>*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  style={inputStyle}
+                                  placeholder={t("যে নম্বর থেকে পাঠিয়েছেন (01XXXXXXXXX)", "Sender Account (01XXXXXXXXX)")}
+                                  value={mobileNumber}
+                                  onChange={(e) => setMobileNumber(e.target.value)}
+                                />
+                              </div>
+
+                              <div>
+                                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 4, fontFamily: "'Inter',sans-serif" }}>
+                                  {t("ট্রানজেকশন আইডি (TrxID)", "Transaction ID (TrxID)")} <span style={{ color: "#DC2626" }}>*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  style={inputStyle}
+                                  placeholder={t("যেমন: 9B7H5X1KL9", "e.g. 9B7H5X1KL9")}
+                                  value={transactionId}
+                                  onChange={(e) => setTransactionId(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Proceed to Review / Confirm Order Action Button */}
+                  <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      type="button"
+                      disabled={!isFormComplete}
+                      onClick={() => setCurrentStep(1)}
+                      style={{
+                        backgroundColor: isFormComplete ? P : "#9CA3AF",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 12,
+                        padding: "14px 32px",
+                        fontSize: 15,
+                        fontWeight: 700,
+                        fontFamily: "'Inter',sans-serif",
+                        cursor: isFormComplete ? "pointer" : "not-allowed",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        width: isMobile ? "100%" : "auto",
+                        boxShadow: isFormComplete ? "0 4px 14px rgba(45,90,39,0.25)" : "none",
+                        transition: "all 0.15s"
+                      }}
+                    >
+                      <span>{t("অর্ডার পর্যালোচনা ও নিশ্চিত করুন", "Review & Confirm Order")}</span>
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* STEP 1: REVIEW & FINAL CONFIRMATION */
+              <div style={{ backgroundColor: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", padding: isMobile ? 18 : 26, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, borderBottom: "1px solid #F3F4F6", paddingBottom: 14 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: P, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, fontFamily: "'Inter',sans-serif" }}>
+                    <Check size={16} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0, fontFamily: "'Inter',sans-serif" }}>
+                      {t("অর্ডার পর্যালোচনা ও কনফার্মেশন", "Order Review & Confirmation")}
+                    </h2>
+                    <span style={{ fontSize: 12, color: "#6B7280" }}>
+                      {t("আপনার তথ্য চেক করে অর্ডার নিশ্চিত করুন", "Please verify your details before final placement")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Details Summary Card */}
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                  
+                  {/* Customer Information */}
+                  <div style={{ backgroundColor: "#F9FAFB", borderRadius: 12, padding: 16, border: "1px solid #E5E7EB" }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      {t("গ্রাহক ও ডেলিভারি তথ্য", "Customer & Delivery Address")}
+                    </span>
+                    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6, fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ color: "#6B7280" }}>{t("নাম:", "Name:")}</span>
+                        <strong style={{ color: "#111827" }}>{form.fullName}</strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ color: "#6B7280" }}>{t("ফোন:", "Phone:")}</span>
+                        <strong style={{ color: "#111827" }}>+880 {form.phone}</strong>
+                      </div>
+                      {form.email && (
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span style={{ color: "#6B7280" }}>{t("ইমেইল:", "Email:")}</span>
+                          <span style={{ color: "#111827" }}>{form.email}</span>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ color: "#6B7280" }}>{t("এরিয়া:", "Location:")}</span>
+                        <span style={{ color: "#111827", fontWeight: 600 }}>
+                          {form.deliveryZone === "dhaka" ? t("ঢাকা সিটি", "Inside Dhaka") : t("ঢাকার বাইরে", "Outside Dhaka")}
+                        </span>
+                      </div>
+                      <div style={{ marginTop: 4, paddingTop: 6, borderTop: "1px dashed #E5E7EB" }}>
+                        <span style={{ color: "#6B7280", fontSize: 11, display: "block" }}>{t("ঠিকানা:", "Address:")}</span>
+                        <p style={{ margin: "2px 0 0", color: "#111827", fontWeight: 500, fontSize: 12, lineHeight: 1.4 }}>
+                          {form.address}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payment Summary */}
+                  <div style={{ backgroundColor: "#F9FAFB", borderRadius: 12, padding: 16, border: "1px solid #E5E7EB" }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      {t("পেমেন্ট বিস্তারিত", "Payment Details")}
+                    </span>
+                    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8, fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ color: "#6B7280" }}>{t("পদ্ধতি:", "Method:")}</span>
+                        <strong style={{ color: P, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          {paymentType === "cod" ? t("ক্যাশ অন ডেলিভারি", "Cash on Delivery (COD)") : onlineMethodsConfig[onlineMethod]?.label}
+                        </strong>
+                      </div>
+
+                      {paymentType === "online" && (
+                        <>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#6B7280" }}>{t("প্রেরক নম্বর:", "Sender No:")}</span>
+                            <strong style={{ color: "#111827" }}>{mobileNumber}</strong>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#6B7280" }}>TrxID:</span>
+                            <span style={{ fontFamily: "monospace", fontWeight: 700, backgroundColor: "#E5E7EB", padding: "2px 6px", borderRadius: 4 }}>
+                              {transactionId}
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      <div style={{ marginTop: 4, paddingTop: 6, borderTop: "1px dashed #E5E7EB", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ color: "#111827", fontWeight: 700 }}>{t("পরিশোধযোগ্য মোট:", "Payable Total:")}</span>
+                        <strong style={{ fontSize: 17, color: P }}>{formatPrice(total)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Error Banner if any */}
+                {placementError && (
+                  <div style={{ backgroundColor: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "12px 16px", color: "#DC2626", fontSize: 13, display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+                    <AlertCircle size={18} />
+                    <span>{placementError}</span>
+                  </div>
+                )}
+
+                {/* Review Action Buttons */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                  <button
+                    type="button"
+                    disabled={isPlacing}
+                    onClick={() => setCurrentStep(0)}
+                    style={{
+                      backgroundColor: "transparent",
+                      color: "#4B5563",
+                      border: "1px solid #D1D5DB",
+                      borderRadius: 10,
+                      padding: "12px 20px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: isPlacing ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6
+                    }}
+                  >
+                    <ArrowLeft size={16} />
+                    <span>{t("তথ্য পরিবর্তন করুন", "Edit Details")}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isPlacing}
+                    onClick={handlePlaceOrder}
+                    style={{
+                      backgroundColor: isPlacing ? "#9CA3AF" : P,
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 12,
+                      padding: "15px 36px",
+                      fontSize: 15,
+                      fontWeight: 800,
+                      fontFamily: "'Inter',sans-serif",
+                      cursor: isPlacing ? "not-allowed" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                      boxShadow: isPlacing ? "none" : "0 4px 16px rgba(45,90,39,0.3)",
+                      flex: isMobile ? 1 : "initial"
+                    }}
+                  >
+                    {isPlacing ? (
+                      <>
+                        <RotateCcw size={18} className="animate-spin" />
+                        <span>{t("অর্ডার প্রসেস হচ্ছে...", "Processing Order...")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={18} />
+                        <span>{t("অর্ডার কনফার্ম করুন", "Confirm & Place Order")}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
 
-          {/* Order summary sidebar */}
-          <div style={{ backgroundColor: "#fff", borderRadius: 16, border: "1px solid #E8E8E8", overflow: "hidden" }}>
-            <div style={{ padding: "18px 22px", borderBottom: "1px solid #E8E8E8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ fontFamily: "'Noto Serif',serif", fontSize: 18, fontWeight: 400, color: "#1A1C1C" }}>
+          {/* RIGHT COLUMN: ORDER SUMMARY SIDEBAR */}
+          <div style={{ backgroundColor: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", position: "sticky", top: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #E5E7EB", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#FAFBF9" }}>
+              <h3 style={{ fontFamily: "'Noto Serif',serif", fontSize: 17, fontWeight: 600, color: "#111827", margin: 0 }}>
                 {t("অর্ডারের সারসংক্ষেপ", "Order Summary")}
               </h3>
-              <span style={{ fontSize: 12, color: "#737973", fontFamily: "'Inter',sans-serif" }}>
+              <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 700, backgroundColor: "#E5E7EB", padding: "2px 8px", borderRadius: 12 }}>
                 {formatNum(items.length)} {t("টি পণ্য", "items")}
               </span>
             </div>
-            <div style={{ padding: "14px 22px", display: "flex", flexDirection: "column", gap: 10, maxHeight: 240, overflowY: "auto" }}>
+
+            {/* Items List */}
+            <div style={{ padding: "14px 20px", display: "flex", flexDirection: "column", gap: 12, maxHeight: 260, overflowY: "auto" }}>
               {items.map((item) => {
                 const name = getProductName(item.product, lang);
                 return (
                   <div key={item.product.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <div style={{ width: 44, height: 44, backgroundColor: "#F3F3F4", borderRadius: 8, padding: 5, flexShrink: 0 }}>
+                    <div style={{ width: 44, height: 44, backgroundColor: "#F3F4F6", borderRadius: 8, padding: 4, flexShrink: 0 }}>
                       <img src={item.product.image} alt={name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 12, fontFamily: "'Inter',sans-serif", color: "#1A1C1C", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</p>
-                      <p style={{ fontSize: 11, color: "#737973", fontFamily: "'Inter',sans-serif" }}>×{formatNum(item.quantity)}</p>
+                      <p style={{ fontSize: 12, fontFamily: "'Inter',sans-serif", color: "#111827", fontWeight: 600, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {name}
+                      </p>
+                      <p style={{ fontSize: 11, color: "#6B7280", fontFamily: "'Inter',sans-serif", margin: "2px 0 0" }}>
+                        {formatPrice(item.product.price)} × {formatNum(item.quantity)}
+                      </p>
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Inter',sans-serif", color: "#1A1C1C", flexShrink: 0 }}>{formatPrice(item.product.price * item.quantity)}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, fontFamily: "'Inter',sans-serif", color: "#111827", flexShrink: 0 }}>
+                      {formatPrice(item.product.price * item.quantity)}
+                    </span>
                   </div>
                 );
               })}
             </div>
-            <div style={{ padding: "14px 22px 22px", borderTop: "1px solid #E8E8E8", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 13, color: "#434843", fontFamily: "'Inter',sans-serif" }}>{t("উপমোট", "Subtotal")}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{formatPrice(subtotal)}</span>
+
+            {/* Totals Calculation */}
+            <div style={{ padding: "16px 20px", borderTop: "1px solid #E5E7EB", display: "flex", flexDirection: "column", gap: 10, backgroundColor: "#FAFBF9" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#4B5563" }}>
+                <span>{t("উপমোট", "Subtotal")}</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>{formatPrice(subtotal)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 13, color: "#434843", fontFamily: "'Inter',sans-serif" }}>{t("ডেলিভারি", "Delivery Charge")}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: deliveryFree ? P : "#1A1C1C", fontFamily: "'Inter',sans-serif" }}>{deliveryFree ? t("বিনামূল্যে", "FREE") : formatPrice(deliveryCharge)}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#4B5563" }}>
+                <span>{t("ডেলিভারি চার্জ", "Delivery Fee")}</span>
+                <span style={{ fontWeight: 700, color: deliveryFree ? P : "#111827" }}>
+                  {deliveryFree ? t("বিনামূল্যে (FREE)", "FREE") : formatPrice(deliveryCharge)}
+                </span>
               </div>
-              <div style={{ height: 1, backgroundColor: "#E8E8E8" }} />
+
+              {!deliveryFree && (
+                <div style={{ fontSize: 11, color: "#059669", backgroundColor: "#ECFDF5", padding: "6px 10px", borderRadius: 6 }}>
+                  {t("৳১৫০০ টাকার কেনাকাটায় ফ্রি ডেলিভারি!", "Free delivery on orders over ৳1500!")}
+                </div>
+              )}
+
+              <div style={{ height: 1, backgroundColor: "#E5E7EB", margin: "4px 0" }} />
+              
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "'Noto Serif',serif", fontSize: 17, color: "#1A1C1C" }}>{t("মোট", "Total")}</span>
-                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 20, fontWeight: 700, color: "#1A1C1C" }}>{formatPrice(total)}</span>
+                <span style={{ fontFamily: "'Noto Serif',serif", fontSize: 17, color: "#111827", fontWeight: 600 }}>
+                  {t("সর্বমোট", "Grand Total")}
+                </span>
+                <span style={{ fontFamily: "'Inter',sans-serif", fontSize: 20, fontWeight: 800, color: P }}>
+                  {formatPrice(total)}
+                </span>
               </div>
             </div>
+
+            {/* Trust Footer */}
+            <div style={{ padding: "12px 20px", backgroundColor: "#F3F4F6", borderTop: "1px solid #E5E7EB", fontSize: 11, color: "#6B7280", display: "flex", alignItems: "center", gap: 6 }}>
+              <ShieldCheck size={14} style={{ color: P }} />
+              <span>{t("নিরাপদ পেমেন্ট ও খাঁটি পণ্যের নিশ্চয়তা", "100% Safe Checkout & Fresh Organic Harvest")}</span>
+            </div>
           </div>
+
         </div>
       </main>
       <Footer />
@@ -274,323 +982,131 @@ export default function Checkout() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ backgroundColor: "#fff", borderRadius: 14, border: "1px solid #E8E8E8", overflow: "hidden", marginBottom: 20 }}>
-      <div style={{ padding: "16px 22px", borderBottom: "1px solid #E8E8E8" }}>
-        <h2 style={{ fontFamily: "'Noto Serif',serif", fontSize: 20, fontWeight: 400, color: "#1A1C1C" }}>{title}</h2>
-      </div>
-      <div style={{ padding: "22px" }}>{children}</div>
-    </div>
-  );
-}
-
-function Field({ label, children, required }: { label: string; children: React.ReactNode; required?: boolean }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <label style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#434843", fontFamily: "'Inter',sans-serif" }}>
-        {label}{required && <span style={{ color: "#D64545" }}> *</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
-
 const inputStyle: React.CSSProperties = {
-  width: "100%", border: "1px solid #E8E8E8", borderRadius: 8,
-  paddingTop: 11, paddingRight: 14, paddingBottom: 11, paddingLeft: 14,
-  fontSize: 15, fontFamily: "'Inter',sans-serif", color: "#1A1C1C", backgroundColor: "#fff",
-  outline: "none", transition: "border 0.2s", boxSizing: "border-box",
+  width: "100%",
+  border: "1px solid #D1D5DB",
+  borderRadius: 8,
+  padding: "10px 14px",
+  fontSize: 13,
+  fontFamily: "'Inter',sans-serif",
+  color: "#111827",
+  backgroundColor: "#fff",
+  outline: "none",
+  boxSizing: "border-box",
+  transition: "border-color 0.15s, box-shadow 0.15s",
 };
-
-function DeliveryStep({ form, setF, onNext, isMobile, lang, t }: { form: any; setF: (k: string, v: string) => void; onNext: () => void; isMobile: boolean; lang: "bn" | "en"; t: (bn: string, en: string) => string }) {
-  const currentDistricts = districtsByDivision[form.division] || [];
-  const valid = form.fullName && form.phone && form.division && form.district && form.thana && form.address;
-  const cols = isMobile ? "1fr" : "1fr 1fr";
-
-  return (
-    <>
-      <Section title={t("যোগাযোগের তথ্য", "Contact Information")}>
-        <div style={{ display: "grid", gridTemplateColumns: cols, gap: 16 }}>
-          <Field label={t("পূর্ণ নাম", "Full Name")} required>
-            <input style={inputStyle} placeholder={t("আপনার পুরো নাম লিখুন", "Enter your full name")} value={form.fullName} onChange={(e) => setF("fullName", e.target.value)} onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")} />
-          </Field>
-          <Field label={t("মোবাইল নম্বর", "Mobile Number")} required>
-            <div style={{ position: "relative" }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#737973", fontFamily: "'Inter',sans-serif" }}>+880</span>
-              <input style={{ ...inputStyle, paddingLeft: 56 }} placeholder="01XXXXXXXXX" value={form.phone} onChange={(e) => setF("phone", e.target.value)} onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")} />
-            </div>
-          </Field>
-          <Field label={t("ইমেইল (ঐচ্ছিক)", "Email (Optional)")}>
-            <input style={inputStyle} type="email" placeholder="your@email.com" value={form.email} onChange={(e) => setF("email", e.target.value)} onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")} />
-          </Field>
-        </div>
-      </Section>
-      <Section title={t("ডেলিভারি ঠিকানা", "Delivery Address")}>
-        <div style={{ display: "grid", gridTemplateColumns: cols, gap: 16 }}>
-          <Field label={t("বিভাগ", "Division")} required>
-            <select style={{ ...inputStyle, cursor: "pointer" }} value={form.division}
-              onChange={(e) => {
-                const newDiv = e.target.value;
-                setF("division", newDiv);
-                const firstDist = districtsByDivision[newDiv]?.[0]?.en ?? "Dhaka";
-                setF("district", firstDist);
-              }}
-              onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")}>
-              {divisions.map((d) => <option key={d.en} value={d.en}>{lang === "en" ? d.en : d.bn}</option>)}
-            </select>
-          </Field>
-          <Field label={t("জেলা", "District")} required>
-            <select style={{ ...inputStyle, cursor: "pointer" }} value={form.district} onChange={(e) => setF("district", e.target.value)}
-              onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")}>
-              {currentDistricts.map((d) => <option key={d.en} value={d.en}>{lang === "en" ? d.en : d.bn}</option>)}
-            </select>
-          </Field>
-          <Field label={t("থানা / উপজেলা", "Thana / Upazila")} required>
-            <input style={inputStyle} placeholder={t("যেমন: গুলশান, ধানমন্ডি", "e.g. Gulshan, Dhanmondi")} value={form.thana} onChange={(e) => setF("thana", e.target.value)} onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")} />
-          </Field>
-          <Field label={t("পোস্টকোড", "Post Code")}>
-            <input style={inputStyle} placeholder={t("যেমন: ১২১২", "e.g. 1212")} value={form.postcode} onChange={(e) => setF("postcode", e.target.value)} onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")} />
-          </Field>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <Field label={t("সম্পূর্ণ ঠিকানা", "Full Address")} required>
-              <textarea style={{ ...inputStyle, resize: "none", height: 80 }} placeholder={t("বাড়ি/ফ্ল্যাট নং, রোড নং, এলাকা", "House/Flat No, Road No, Area")} value={form.address} onChange={(e) => setF("address", e.target.value)} onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")} />
-            </Field>
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <Field label={t("অর্ডারের নোট", "Order Notes")}>
-              <textarea style={{ ...inputStyle, resize: "none", height: 68 }} placeholder={t("বিশেষ ডেলিভারি নির্দেশনা? (ঐচ্ছিক)", "Special delivery instructions? (Optional)")} value={form.notes} onChange={(e) => setF("notes", e.target.value)} onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")} />
-            </Field>
-          </div>
-        </div>
-        <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>
-          <button onClick={onNext} disabled={!valid}
-            style={{ backgroundColor: valid ? P : "#C3C8C1", color: "#fff", border: "none", borderRadius: 10, padding: "13px 36px", fontSize: 14, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: valid ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: 8, width: isMobile ? "100%" : "auto", justifyContent: "center" }}>
-            {t("পেমেন্টে যান", "Proceed to Payment")}
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
-          </button>
-        </div>
-      </Section>
-    </>
-  );
-}
-
-function PaymentStep({ payMethod, setPayMethod, payMethods, mobileNumber, setMobileNumber, transactionId, setTransactionId, onNext, onBack, total, isMobile, t, formatPrice }: any) {
-  const needsMobile = ["bkash", "nagad", "rocket"].includes(payMethod);
-  const valid = payMethod === "cod" || payMethod === "bank" || (mobileNumber.length >= 11 && transactionId.length >= 6);
-
-  return (
-    <Section title={t("পেমেন্ট পদ্ধতি", "Payment Method")}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 24 }}>
-        {payMethods.map((m: any) => (
-          <button key={m.id} onClick={() => setPayMethod(m.id)}
-            style={{ border: payMethod === m.id ? `2px solid ${m.color}` : "2px solid #E8E8E8", borderRadius: 12, padding: "14px 18px", backgroundColor: payMethod === m.id ? `${m.color}08` : "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
-            <div style={{ width: 38, height: 38, borderRadius: 8, backgroundColor: `${m.color}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20, color: m.color }}>{m.icon}</span>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: payMethod === m.id ? m.color : "#1A1C1C", fontFamily: "'Inter',sans-serif", margin: 0 }}>{m.label}</p>
-              <p style={{ fontSize: 11, color: "#737973", fontFamily: "'Inter',sans-serif", margin: 0 }}>{m.sub}</p>
-            </div>
-            {payMethod === m.id && <span className="material-symbols-outlined fill" style={{ marginLeft: "auto", fontSize: 18, color: m.color, flexShrink: 0 }}>check_circle</span>}
-          </button>
-        ))}
-      </div>
-
-      {needsMobile && (
-        <div style={{ backgroundColor: "#F9F9F9", borderRadius: 12, padding: 20, marginBottom: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ backgroundColor: "#fff3cd", borderRadius: 8, padding: "11px 14px", display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16, color: "#856404", flexShrink: 0, marginTop: 1 }}>info</span>
-            <p style={{ fontSize: 12, color: "#856404", fontFamily: "'Inter',sans-serif", lineHeight: 1.5, margin: 0 }}>
-              {t("নম্বরে ", "Send ")}<strong>{formatPrice(total)}</strong>{t(" পাঠান: ", " to: ")}<strong>01XXXXXXXXX</strong>{t("। তারপর নিচের তথ্য পূরণ করুন।", ". Then enter the transaction details below.")}
-            </p>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <Field label={t("আপনার মোবাইল নম্বর", "Your Mobile Number")} required>
-              <div style={{ position: "relative" }}>
-                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#737973", fontFamily: "'Inter',sans-serif" }}>+880</span>
-                <input style={{ ...inputStyle, paddingLeft: 54 }} placeholder="01XXXXXXXXX" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")} />
-              </div>
-            </Field>
-            <Field label={t("ট্রানজেকশন আইডি", "Transaction ID")} required>
-              <input style={inputStyle} placeholder={t("যেমন: 8B7D4G3KS9", "e.g. 8B7D4G3KS9")} value={transactionId} onChange={(e) => setTransactionId(e.target.value)} onFocus={(e) => (e.target.style.borderColor = P)} onBlur={(e) => (e.target.style.borderColor = "#E8E8E8")} />
-            </Field>
-          </div>
-        </div>
-      )}
-      {payMethod === "cod" && (
-        <div style={{ backgroundColor: "#DFF2D8", borderRadius: 12, padding: "14px 18px", display: "flex", gap: 10, alignItems: "center", marginBottom: 20 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20, color: P }}>payments</span>
-          <p style={{ fontSize: 13, color: P, fontFamily: "'Inter',sans-serif", margin: 0 }}>
-            {t("পণ্য পাওয়ার সময় ", "Pay ")}<strong>{formatPrice(total)}</strong>{t(" নগদে পরিশোধ করুন।", " in cash upon delivery.")}
-          </p>
-        </div>
-      )}
-
-      <div style={{ display: "flex", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: 12 }}>
-        <button onClick={onBack} style={{ background: "none", border: "1px solid #E8E8E8", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontFamily: "'Inter',sans-serif", cursor: "pointer", color: "#434843", display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span> {t("পেছনে", "Back")}
-        </button>
-        <button onClick={onNext} disabled={!valid}
-          style={{ backgroundColor: valid ? P : "#C3C8C1", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: valid ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-          {t("অর্ডার পর্যালোচনা করুন", "Review Order")}
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
-        </button>
-      </div>
-    </Section>
-  );
-}
-
-function ReviewStep({ form, payMethod, payMethods, onBack, onPlace, isMobile, t, isPlacing, placementError }: { form: any; payMethod: PayMethod; payMethods: any[]; onBack: () => void; onPlace: () => void; isMobile: boolean; t: (bn: string, en: string) => string; isPlacing?: boolean; placementError?: string | null }) {
-  const method = payMethods.find((m) => m.id === payMethod)!;
-  return (
-    <>
-      <Section title={t("ডেলিভারির বিবরণ", "Delivery Details")}>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 14 }}>
-          {[[t("নাম", "Name"), form.fullName], [t("ফোন", "Phone"), `+880 ${form.phone}`], [t("বিভাগ", "Division"), form.division], [t("জেলা", "District"), form.district], [t("থানা", "Thana"), form.thana], [t("পোস্টকোড", "Postcode"), form.postcode || "—"]].map(([k, v]) => (
-            <div key={k as string}>
-              <p style={{ fontSize: 10, textTransform: "uppercase", fontWeight: 700, color: "#737973", letterSpacing: "0.08em", fontFamily: "'Inter',sans-serif", marginBottom: 3 }}>{k as string}</p>
-              <p style={{ fontSize: 14, color: "#1A1C1C", fontFamily: "'Inter',sans-serif" }}>{v as string}</p>
-            </div>
-          ))}
-          <div style={{ gridColumn: "1 / -1" }}>
-            <p style={{ fontSize: 10, textTransform: "uppercase", fontWeight: 700, color: "#737973", letterSpacing: "0.08em", fontFamily: "'Inter',sans-serif", marginBottom: 3 }}>{t("ঠিকানা", "Address")}</p>
-            <p style={{ fontSize: 14, color: "#1A1C1C", fontFamily: "'Inter',sans-serif" }}>{form.address}</p>
-          </div>
-        </div>
-      </Section>
-      <Section title={t("পেমেন্ট", "Payment")}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 8, backgroundColor: `${method.color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20, color: method.color }}>{method.icon}</span>
-          </div>
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Inter',sans-serif", color: "#1A1C1C", margin: 0 }}>{method.label}</p>
-            <p style={{ fontSize: 12, color: "#737973", fontFamily: "'Inter',sans-serif", margin: 0 }}>{method.sub}</p>
-          </div>
-        </div>
-      </Section>
-
-      {placementError && (
-        <div style={{ 
-          backgroundColor: "#FEF2F2", 
-          border: "1px solid #FDE8E8", 
-          borderRadius: 12, 
-          padding: "14px 18px", 
-          color: "#991B1B", 
-          fontSize: 13, 
-          fontFamily: "'Inter', sans-serif",
-          marginBottom: 16,
-          display: "flex",
-          alignItems: "center",
-          gap: 10
-        }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>error</span>
-          <span>{placementError}</span>
-        </div>
-      )}
-
-      <div style={{ backgroundColor: "#fff", borderRadius: 14, border: "1px solid #E8E8E8", padding: 22, display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 12 }}>
-        <button 
-          onClick={onBack} 
-          disabled={isPlacing}
-          style={{ background: "none", border: "1px solid #E8E8E8", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontFamily: "'Inter',sans-serif", cursor: isPlacing ? "not-allowed" : "pointer", color: "#434843", display: "flex", alignItems: "center", gap: 6, justifyContent: "center", opacity: isPlacing ? 0.6 : 1 }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span> {t("পেছনে", "Back")}
-        </button>
-        <button 
-          onClick={onPlace}
-          disabled={isPlacing}
-          style={{ 
-            backgroundColor: isPlacing ? "#A1A8A1" : P, 
-            color: "#fff", 
-            border: "none", 
-            borderRadius: 10, 
-            padding: "15px 36px", 
-            fontSize: 15, 
-            fontWeight: 700, 
-            fontFamily: "'Inter',sans-serif", 
-            cursor: isPlacing ? "not-allowed" : "pointer", 
-            display: "flex", 
-            alignItems: "center", 
-            gap: 10, 
-            boxShadow: isPlacing ? "none" : "0 4px 16px rgba(45,90,39,0.3)", 
-            letterSpacing: "0.04em", 
-            justifyContent: "center" 
-          }}
-        >
-          {isPlacing ? (
-            <>
-              <span className="material-symbols-outlined" style={{ animation: "spin 1s linear infinite", fontSize: 20 }}>sync</span>
-              {t("অর্ডার প্রসেস হচ্ছে...", "Processing...")}
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>lock</span>
-              {t("নিরাপদে অর্ডার দিন", "Place Secure Order")}
-            </>
-          )}
-        </button>
-      </div>
-    </>
-  );
-}
 
 function OrderSuccess({ orderId, total, lang, t, formatPrice }: { orderId: string; total: number; lang: "bn" | "en"; t: (bn: string, en: string) => string; formatPrice: (p: number) => string }) {
   const [, navigate] = useLocation();
   const { isMobile } = useResponsive();
+
   return (
-    <div style={{ backgroundColor: "#F9F9F9", minHeight: "100vh" }}>
+    <div style={{ backgroundColor: "#F9FAF8", minHeight: "100vh" }}>
       <Header />
-      <div style={{ maxWidth: 600, margin: "60px auto", padding: isMobile ? "0 20px 60px" : "0 32px 80px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
-        <div style={{ width: 88, height: 88, backgroundColor: "#DFF2D8", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span className="material-symbols-outlined fill" style={{ fontSize: 48, color: P }}>check_circle</span>
-        </div>
-        <div>
-          <h1 style={{ fontFamily: "'Noto Serif',serif", fontSize: isMobile ? 28 : 36, fontWeight: 400, color: "#1A1C1C", marginBottom: 10 }}>
-            {t("অর্ডার নিশ্চিত হয়েছে!", "Order Confirmed!")}
-          </h1>
-          <p style={{ fontSize: 15, color: "#434843", fontFamily: "'Inter',sans-serif", lineHeight: 1.6 }}>
-            {t("আপনার অর্ডারের জন্য ধন্যবাদ। শীঘ্রই আমরা প্রস্তুত করে শিপমেন্টের সময় জানাব।", "Thank you for your order. We are preparing your items and will notify you when shipped.")}
-          </p>
-        </div>
-        <div style={{ backgroundColor: "#fff", borderRadius: 16, border: "1px solid #E8E8E8", padding: "24px 32px", width: "100%" }}>
-          {[[t("অর্ডার আইডি", "Order ID"), orderId], [t("পরিশোধিত পরিমাণ", "Total Amount"), formatPrice(total)], [t("আনুমানিক ডেলিভারি", "Estimated Delivery"), t("২–৪ কার্যদিবস", "2-4 Business Days")]].map(([k, v]) => (
-            <div key={k as string} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #F3F3F4" }}>
-              <span style={{ fontSize: 14, color: "#737973", fontFamily: "'Inter',sans-serif" }}>{k as string}</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#1A1C1C", fontFamily: "'Inter',sans-serif" }}>{v as string}</span>
-            </div>
-          ))}
+      <div style={{ maxWidth: 580, margin: "40px auto 80px", padding: isMobile ? "0 20px" : "0 24px", textAlign: "center" }}>
+        
+        <div style={{
+          width: 72,
+          height: 72,
+          backgroundColor: "#DCFCE7",
+          color: P,
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          margin: "0 auto 20px",
+          boxShadow: "0 8px 20px rgba(45,90,39,0.15)"
+        }}>
+          <CheckCircle2 size={42} />
         </div>
 
-        {/* Dynamic World-class Actions */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
-          <button onClick={() => window.open(`/invoice/${orderId}`, "_blank")}
-            style={{ backgroundColor: "#ffffff", color: P, border: `2.5px solid ${P}`, borderRadius: 10, padding: "13px 36px", fontSize: 14, fontWeight: 700, fontFamily: "'Inter',sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s" }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = P_LIGHT; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#ffffff"; }}
+        <h1 style={{ fontFamily: "'Noto Serif',serif", fontSize: isMobile ? 24 : 32, fontWeight: 600, color: "#111827", margin: "0 0 8px" }}>
+          {t("অর্ডার সফলভাবে নিশ্চিত হয়েছে!", "Order Confirmed Successfully!")}
+        </h1>
+
+        <p style={{ fontSize: 14, color: "#4B5563", fontFamily: "'Inter',sans-serif", lineHeight: 1.6, margin: "0 0 24px" }}>
+          {t("ধন্যবাদ! আপনার অর্গানিক পণ্যের অর্ডারটি গৃহীত হয়েছে। শীঘ্রই আমাদের প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।", "Thank you! Your order has been placed. Our representative will contact you shortly.")}
+        </p>
+
+        {/* Order Details Confirmation Card */}
+        <div style={{ backgroundColor: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", padding: "20px 24px", marginBottom: 24, textAlign: "left", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F3F4F6", fontSize: 13 }}>
+            <span style={{ color: "#6B7280" }}>{t("অর্ডার রেফারেন্স নং", "Order Ref Number")}</span>
+            <strong style={{ color: P, fontFamily: "'Inter',sans-serif" }}>#{orderId}</strong>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F3F4F6", fontSize: 13 }}>
+            <span style={{ color: "#6B7280" }}>{t("মোট পরিশোধযোগ্য পরিমাণ", "Total Amount")}</span>
+            <strong style={{ color: "#111827", fontSize: 15 }}>{formatPrice(total)}</strong>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13 }}>
+            <span style={{ color: "#6B7280" }}>{t("আনুমানিক ডেলিভারি সময়", "Estimated Delivery")}</span>
+            <strong style={{ color: "#166534" }}>{t("২৪–৭২ ঘণ্টা", "24-72 Hours")}</strong>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button
+            onClick={() => window.open(`/invoice/${orderId}`, "_blank")}
+            style={{
+              backgroundColor: "#fff",
+              color: P,
+              border: `2px solid ${P}`,
+              borderRadius: 10,
+              padding: "12px 24px",
+              fontSize: 14,
+              fontWeight: 700,
+              fontFamily: "'Inter',sans-serif",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              transition: "all 0.15s"
+            }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>receipt_long</span>
-            {t("অফিসিয়াল ইনভয়েস দেখুন ও প্রিন্ট করুন", "View & Print Official Invoice")}
+            <span>{t("ইনভয়েস দেখুন ও প্রিন্ট করুন", "View & Print Official Invoice")}</span>
           </button>
 
-          <button onClick={() => navigate(`/track?id=${orderId}`)}
-            style={{ backgroundColor: P, color: "#ffffff", border: "none", borderRadius: 10, padding: "14px 36px", fontSize: 14, fontWeight: 700, fontFamily: "'Inter',sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s" }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = P_DARK; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = P; }}
+          <button
+            onClick={() => navigate(`/track?id=${orderId}`)}
+            style={{
+              backgroundColor: P,
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              padding: "13px 24px",
+              fontSize: 14,
+              fontWeight: 700,
+              fontFamily: "'Inter',sans-serif",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              transition: "all 0.15s"
+            }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>gps_fixed</span>
-            {t("লাইভ অর্ডার ট্র্যাকিং", "Live Order Tracking")}
+            <span>{t("লাইভ অর্ডার ট্র্যাকিং", "Track Your Order Live")}</span>
           </button>
 
-          <button onClick={() => navigate("/")}
-            style={{ backgroundColor: "transparent", color: "#6B7280", border: "1px solid #D1D5DB", borderRadius: 10, padding: "11px 36px", fontSize: 14, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: "pointer" }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#F9FAFB"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+          <button
+            onClick={() => navigate("/")}
+            style={{
+              backgroundColor: "transparent",
+              color: "#6B7280",
+              border: "none",
+              padding: "10px",
+              fontSize: 13,
+              fontWeight: 600,
+              fontFamily: "'Inter',sans-serif",
+              cursor: "pointer"
+            }}
           >
-            {t("কেনাকাটা চালিয়ে যান", "Continue Shopping")}
+            {t("আরও কেনাকাটা করুন", "Continue Shopping")}
           </button>
         </div>
+
       </div>
       <Footer />
     </div>
