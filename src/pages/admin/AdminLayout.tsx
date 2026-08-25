@@ -26,7 +26,8 @@ import {
   Trash2,
   RefreshCw,
   Check,
-  AlertCircle
+  AlertCircle,
+  BookOpen
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -59,6 +60,7 @@ export default function AdminLayout({ children, title = "Dashboard" }: AdminLayo
     { path: "/admin/products", icon: Package, label: "Products" },
     { path: "/admin/orders", icon: Receipt, label: "Orders", badge: "Live" },
     { path: "/admin/categories", icon: FolderTree, label: "Categories" },
+    { path: "/admin/pages-cms", icon: BookOpen, label: "Pages & Content" },
   ];
 
   const SETTINGS_NAV = [

@@ -129,19 +129,16 @@ export default function Footer() {
   ];
 
   const companyLinks = [
-    { labelBn: "আমাদের গল্প", labelEn: "Our Story" },
-    { labelBn: "সোর্সিং প্রতিশ্রুতি", labelEn: "Sourcing Promise" },
-    { labelBn: "টেকসই উন্নয়ন", labelEn: "Sustainability" },
-    { labelBn: "কারিগর কৃষক", labelEn: "Artisanal Farmers" },
-    { labelBn: "ব্লগ ও রেসিপি", labelEn: "Blog & Recipes" },
+    { labelBn: "আমাদের গল্প", labelEn: "Our Story", path: "/our-story" },
+    { labelBn: "ব্লগ ও রেসিপি", labelEn: "Blog & Recipes", path: "/blog" },
   ];
 
   const helpLinks = [
-    { labelBn: "শিপিং নীতি", labelEn: "Shipping Policy" },
-    { labelBn: "রিটার্ন ও রিফান্ড", labelEn: "Returns & Refund" },
-    { labelBn: "অর্ডার ট্র্যাক করুন", labelEn: "Track Order" },
-    { labelBn: "প্রশ্নোত্তর", labelEn: "FAQs" },
-    { labelBn: "যোগাযোগ করুন", labelEn: "Contact Us" },
+    { labelBn: "শিপিং নীতি", labelEn: "Shipping Policy", path: "/shipping-policy" },
+    { labelBn: "রিটার্ন ও রিফান্ড", labelEn: "Returns & Refund", path: "/returns-refund" },
+    { labelBn: "অর্ডার ট্র্যাক করুন", labelEn: "Track Order", path: "/track" },
+    { labelBn: "প্রশ্নোত্তর", labelEn: "FAQs", path: "/faqs" },
+    { labelBn: "যোগাযোগ করুন", labelEn: "Contact Us", path: "/contact" },
   ];
 
   const certBadges = [
@@ -266,7 +263,14 @@ export default function Footer() {
             onLink={(label) => { const item = shopLinks.find((s) => s.labelBn === label || s.labelEn === label); navigate(`/category/${item?.slug ?? "all"}`); }} />
 
           {/* Company col */}
-          <FooterCol title={t("কোম্পানি", "Company")} links={companyLinks.map((c) => lang === "en" ? c.labelEn : c.labelBn)} />
+          <FooterCol 
+            title={t("কোম্পানি", "Company")} 
+            links={companyLinks.map((c) => lang === "en" ? c.labelEn : c.labelBn)} 
+            onLink={(label) => {
+              const item = companyLinks.find((c) => c.labelBn === label || c.labelEn === label);
+              if (item?.path) navigate(item.path);
+            }}
+          />
 
           {/* Help col — hide on mobile (2-col grid doesn't have room) */}
           {!isMobile && (
@@ -277,7 +281,7 @@ export default function Footer() {
                   <li key={link.labelEn}>
                     <FooterLink
                       label={lang === "en" ? link.labelEn : link.labelBn}
-                      onClick={link.labelEn === "Track Order" ? () => navigate("/track") : undefined}
+                      onClick={() => navigate(link.path)}
                     />
                   </li>
                 ))}
@@ -319,9 +323,12 @@ export default function Footer() {
             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: "'Inter',sans-serif", margin: 0 }}>
               {copyrightText}
             </p>
-            {[t("গোপনীয়তা নীতি", "Privacy Policy"), t("সেবার শর্তাবলী", "Terms of Service")].map((itemText) => (
-              <a key={itemText} href="#" style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontFamily: "'Inter',sans-serif", textDecoration: "none" }}>{itemText}</a>
-            ))}
+            <a href="/privacy-policy" onClick={(e) => { e.preventDefault(); navigate("/privacy-policy"); }} style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontFamily: "'Inter',sans-serif", textDecoration: "none" }}>
+              {t("গোপনীয়তা নীতি", "Privacy Policy")}
+            </a>
+            <a href="/terms" onClick={(e) => { e.preventDefault(); navigate("/terms"); }} style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontFamily: "'Inter',sans-serif", textDecoration: "none" }}>
+              {t("সেবার শর্তাবলী", "Terms of Service")}
+            </a>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "'Inter',sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginRight: 4 }}>

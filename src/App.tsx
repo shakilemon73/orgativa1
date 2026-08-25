@@ -18,6 +18,15 @@ import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminOrderDetail from "@/pages/admin/AdminOrderDetail";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminNotifications from "@/pages/admin/AdminNotifications";
+import AdminPagesCMS from "@/pages/admin/AdminPagesCMS";
+import ShippingPolicyPage from "@/pages/ShippingPolicyPage";
+import ReturnsRefundPage from "@/pages/ReturnsRefundPage";
+import FaqPage from "@/pages/FaqPage";
+import ContactPage from "@/pages/ContactPage";
+import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
+import TermsPage from "@/pages/TermsPage";
+import OurStoryPage from "@/pages/OurStoryPage";
+import BlogRecipesPage from "@/pages/BlogRecipesPage";
 
 function Router() {
   return (
@@ -34,6 +43,17 @@ function Router() {
         <Route path="/track-order" component={OrderTracking} />
         <Route path="/invoice/:orderNumber" component={InvoicePage} />
 
+        {/* Dynamic Context Pages */}
+        <Route path="/shipping-policy" component={ShippingPolicyPage} />
+        <Route path="/returns-refund" component={ReturnsRefundPage} />
+        <Route path="/faqs" component={FaqPage} />
+        <Route path="/contact" component={ContactPage} />
+        <Route path="/privacy-policy" component={PrivacyPolicyPage} />
+        <Route path="/terms" component={TermsPage} />
+        <Route path="/our-story" component={OurStoryPage} />
+        <Route path="/blog" component={BlogRecipesPage} />
+        <Route path="/recipes" component={BlogRecipesPage} />
+
         {/* Admin routes */}
         <Route path="/admin" component={() => <Redirect to="/admin/dashboard" />} />
         <Route path="/admin/" component={() => <Redirect to="/admin/dashboard" />} />
@@ -47,6 +67,7 @@ function Router() {
         <ProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
         <ProtectedRoute path="/admin/settings" component={AdminSettings} />
         <ProtectedRoute path="/admin/notifications" component={AdminNotifications} />
+        <ProtectedRoute path="/admin/pages-cms" component={AdminPagesCMS} />
 
         <Route component={NotFound} />
       </Switch>
